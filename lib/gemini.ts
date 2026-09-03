@@ -12,7 +12,13 @@ function toImagePart(dataUrl: string) {
   };
 }
 
-export async function generateImage(prompt: string, referenceImageDataUrls: string[] = []): Promise<string> {
+export type ImageAspectRatio = '16:9' | '9:16';
+
+export async function generateImage(
+  prompt: string,
+  referenceImageDataUrls: string[] = [],
+  aspectRatio: ImageAspectRatio = '16:9'
+): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY not set');
 
@@ -26,12 +32,22 @@ export async function generateImage(prompt: string, referenceImageDataUrls: stri
     ...selectedReferenceImages.map(toImagePart),
   ];
 
+  // Explicitly request the selected output ratio. Without this, Gemini can
+  // choose a ratio from the reference images, which is especially problematic
+  // for multi-character landscape compositions.
   const body = {
     contents: [
       {
         parts: requestParts,
       },
     ],
+    generationConfig: {
+      responseFormat: {
+        image: {
+          aspectRatio,
+        },
+      },
+    },
   };
 
   // Debug: log outgoing request
