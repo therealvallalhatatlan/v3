@@ -32,9 +32,8 @@ export async function generateImage(
     ...selectedReferenceImages.map(toImagePart),
   ];
 
-  // Explicitly request the selected output ratio. Without this, Gemini can
-  // choose a ratio from the reference images, which is especially problematic
-  // for multi-character landscape compositions.
+  // Explicitly request the output ratio. The prompt contains framing guidance,
+  // but the API must also be told which image geometry to actually render.
   const body = {
     contents: [
       {
@@ -42,15 +41,12 @@ export async function generateImage(
       },
     ],
     generationConfig: {
-      responseFormat: {
-        image: {
-          aspectRatio,
-        },
+      imageConfig: {
+        aspectRatio,
       },
     },
   };
 
-  // Debug: log outgoing request
   console.log('GEMINI REQUEST BODY:', JSON.stringify(body, null, 2));
 
   const res = await fetch(
@@ -68,9 +64,7 @@ export async function generateImage(
     throw new Error(`Gemini API error: ${res.status} ${text}`);
   }
   const data = await res.json();
-  // Log the full Gemini API response for debugging
   console.log('GEMINI RESPONSE BODY:', JSON.stringify(data, null, 2));
-  // Surface any error or warning fields if present
   if (data.error) {
     console.error('Gemini API error field:', JSON.stringify(data.error, null, 2));
   }
