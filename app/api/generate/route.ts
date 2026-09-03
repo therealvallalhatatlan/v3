@@ -207,9 +207,9 @@ export async function POST(req: NextRequest) {
           prompt: comparePrompt, variant: 'B', createdAt: Date.now(),
         });
       }
-      return NextResponse.json({ ok: true, imagePath, imagePathB, prompt, comparePrompt, characterIds: normalizedCharacterIds, aspectRatio: aspectRatioKey, style: styleKey, compareStyle: compareStyleKey, locationProfileId: normalizedScenePackage?.locationProfileId, locationFingerprint });
+      return NextResponse.json({ ok: true, imagePath, imagePathB, image: imagePath, compareImage: imagePathB, prompt, comparePrompt, characterIds: normalizedCharacterIds, aspectRatio: aspectRatioKey, style: styleKey, compareStyle: compareStyleKey, locationProfileId: normalizedScenePackage?.locationProfileId, locationFingerprint });
     }
-    return NextResponse.json({ ok: true, imagePath, prompt, characterIds: normalizedCharacterIds, aspectRatio: aspectRatioKey, style: styleKey, locationProfileId: normalizedScenePackage?.locationProfileId, locationFingerprint });
+    return NextResponse.json({ ok: true, imagePath, image: imagePath, prompt, characterIds: normalizedCharacterIds, aspectRatio: aspectRatioKey, style: styleKey, locationProfileId: normalizedScenePackage?.locationProfileId, locationFingerprint });
   } catch (error: any) {
     console.error('Generation error:', error);
     return NextResponse.json({ error: error?.message || 'Generation failed' }, { status: 500 });
