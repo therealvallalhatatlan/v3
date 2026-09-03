@@ -149,6 +149,35 @@ ${characters.map((character) => `- ${character.alias}: ${character.identity.name
 `;
 }
 
+export function buildMultiCharacterCompositionBlock(scene: SceneInput, characters: CharacterDNA[]): string {
+  const aliases = characters.map((character) => character.alias).join(', ');
+
+  if (scene.aspectRatio === 'landscape-16-9') {
+    return `
+[MULTI-CHARACTER COMPOSITION - LANDSCAPE 16:9]
+- This is a deliberate two-character widescreen composition for ${aliases}.
+- Establish the composition around the complete bodies and faces of all listed characters before adding environmental detail.
+- Use a medium-wide or wide two-shot with enough camera distance to contain every character comfortably.
+- Both characters must have generous headroom; the top of every head, hair, or mask must remain fully inside the frame.
+- Keep both faces clearly visible and inside the central safe area, away from the image edges.
+- Keep both bodies readable and avoid cropping heads, shoulders, hands, feet, or distinctive costume elements unless the action explicitly requires it.
+- Prefer horizontal spatial separation, natural side-by-side or staggered blocking, rather than stacking subjects into a narrow vertical column.
+- If the scene feels crowded, move the camera farther back instead of cropping a character.
+- Environment fills the remaining horizontal space; do not sacrifice character readability to make the location more dramatic.
+- No character may touch the top, left, right, or bottom boundary of the image.
+- The final frame must read immediately as one coherent photograph containing exactly ${characters.length} distinct people.
+`;
+  }
+
+  return `
+[MULTI-CHARACTER COMPOSITION - PORTRAIT 9:16]
+- Compose ${aliases} as a coherent vertical multi-character scene.
+- Preserve full head and face visibility for every character.
+- Maintain clear vertical spacing and readable body language.
+- Keep the composition balanced without forcing either character against the image boundary.
+`;
+}
+
 export function buildMultiCharacterConstraintBlock(characters: CharacterDNA[]): string {
   return `
 [MULTI-CHARACTER CONSTRAINTS]
@@ -178,7 +207,6 @@ ${unique.map((item) => `- ${item}`).join('\n')}
 `;
 }
 
-// Optional: state modifier
 export function buildStateModifier(state: 'normal' | 'high' | 'crash'): string {
   switch (state) {
     case 'high':
@@ -233,6 +261,7 @@ export function buildFinalPromptMulti(
   const blocks: string[] = [
     buildCastBlock(characters),
     `[MULTI SUBJECT GOAL]\nRender all listed characters together in the same moment and environment. Do not drop or replace any alias.`,
+    buildMultiCharacterCompositionBlock(scene, characters),
   ];
 
   for (const character of characters) {
