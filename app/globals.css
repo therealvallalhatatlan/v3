@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Inter', 'Fira Mono', ui-monospace, SFMono-Regular, monospace, system-ui;
+  background: #111;
+  color: #eee;
+}
+
+/* Subtle noise overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: url('/noise.png');
+  opacity: 0.15;
+}
