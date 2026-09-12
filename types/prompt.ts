@@ -15,7 +15,7 @@ export type CharacterDNA = {
     bottom: string;
     accessories: string[];
   };
-  anchors: string[]; // MUST remain EXACT across prompts
+  anchors: string[];
   texture: {
     material: string;
     wear: string;
@@ -24,6 +24,15 @@ export type CharacterDNA = {
   energy: string;
   environmentAffinity: string[];
 };
+
+/**
+ * Preset keys are runtime configuration. Built-in and custom keys are both
+ * allowed, so adding a preset never requires a TypeScript type edit.
+ */
+export type LocationPreset = string;
+export type StylePreset = string;
+export type ShotTemplate = 'establishing-wide' | 'medium-dialogue' | 'closeup-emotion' | 'over-shoulder' | 'insert-detail' | 'tracking-motion';
+export type AspectRatio16x9 = 'landscape-16-9' | 'portrait-9-16';
 
 export type SceneInput = {
   location: string;
@@ -36,53 +45,8 @@ export type SceneInput = {
   aspectRatio: AspectRatio16x9;
   style: StylePreset;
   styleIntensity: number;
-  camera:
-    | "closeup"
-    | "wide"
-    | "fisheye"
-    | "handheld"
-    | "dutch"
-    | "birdseye"
-    | "overtheshoulder"
-    | "wormseye"
-    | "speedcam1999"
-    | "security-cam"
-    | "telephoto-stakeout"
-    | "cctv-distorted"
-    | "reflection-pov"
-    | "macro-forensic"
-    | "pov-dashboard";
+  camera: string;
 };
-
-  export type AspectRatio16x9 = 'landscape-16-9' | 'portrait-9-16';
-
-export type LocationPreset =
-  | ""
-  | "urban-street"
-  | "apartment"
-  | "office"
-  | "warehouse"
-  | "rooftop"
-  | "subway"
-  | "forest"
-  | "industrial-yard"
-  | "night-highway"
-  | "interrogation-room"
-  | "budai"
-  | "bevasarlokozpont"
-  | "vaulted-cellar-server-room"
-  | "mcdonalds-east-eu-2000"
-  | "land-rover-interior-pov"
-  | "white-studio-sofa"
-  | "hotel-courtyard-pool-cocktail-bar";
-
-export type ShotTemplate =
-  | "establishing-wide"
-  | "medium-dialogue"
-  | "closeup-emotion"
-  | "over-shoulder"
-  | "insert-detail"
-  | "tracking-motion";
 
 export type LocationProfile = {
   preset: LocationPreset;
@@ -109,15 +73,6 @@ export type ScenePackageInput = {
   continuity: LocationContinuity;
   shotTemplate: ShotTemplate;
   bilingualInput?: {
-    sourceLanguage: "hu" | "en" | "mixed";
+    sourceLanguage: 'hu' | 'en' | 'mixed';
   };
 };
-
-export type StylePreset =
-  | "gritty"
-  | "noir-bw"
-  | "vhs-glitch"
-  | "neo-noir-neon"
-  | "dreamy-ethereal"
-  | "graphic-novel"
-  | "police-speed-photo";
