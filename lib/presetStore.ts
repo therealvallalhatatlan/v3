@@ -1,4 +1,5 @@
 import { readJSON, writeJSON } from './fileUtils';
+import { initStorage } from './paths';
 
 export type PresetType = 'location' | 'camera' | 'style';
 
@@ -35,6 +36,7 @@ function normalizePreset(raw: any): CustomPreset | null {
 }
 
 export function getCustomPresets(): CustomPreset[] {
+  initStorage();
   const raw = readJSON<any>(PRESETS_FILE);
   const values = Array.isArray(raw) ? raw : Array.isArray(raw?.presets) ? raw.presets : [];
   return values
@@ -47,6 +49,7 @@ export function getCustomPreset(type: PresetType, key: string): CustomPreset | u
 }
 
 export function saveCustomPresets(presets: CustomPreset[]): void {
+  initStorage();
   writeJSON(PRESETS_FILE, presets);
 }
 
