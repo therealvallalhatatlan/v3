@@ -1,5 +1,5 @@
 import { LocationPreset, SceneInput, ShotTemplate } from '../types/prompt';
-import { getCustomPreset } from './presetStore';
+import { getPreset, getPresetsByType } from './presetStore';
 
 const MOOD_MAP: Record<string, string> = {
   paras: 'tense, paranoid atmosphere, dim lighting, unease',
@@ -7,26 +7,9 @@ const MOOD_MAP: Record<string, string> = {
   euforikus: 'intense, surreal glow, heightened contrast',
 };
 
-export const LOCATION_PRESET_MAP: Record<string, string> = {
-  '': '',
-  'urban-street': 'dense Budapest urban street, late 1990s to early 2000s, layered storefronts, period-correct signage and lived-in city texture',
-  apartment: 'small Budapest apartment interior, late 1990s to early 2000s, practical furniture and period-accurate daily-life clutter',
-  office: 'functional Budapest office interior, late 1990s to early 2000s, grounded corporate realism with era-appropriate fixtures',
-  warehouse: 'Budapest industrial warehouse, late 1990s to early 2000s, hard surfaces, ambient dust, and period-correct utility details',
-  rooftop: 'Budapest city rooftop, late 1990s to early 2000s, skyline depth, wind exposure, and practical safety details',
-  subway: 'Budapest underground metro station, late 1990s to early 2000s, repeating geometry, public-transport wear, era-accurate materials',
-  forest: 'forest edge around Budapest, late 1990s to early 2000s, layered vegetation with realistic regional atmosphere',
-  'industrial-yard': 'Budapest industrial yard, late 1990s to early 2000s, rugged materials, heavy-equipment traces, and period utility clutter',
-  'night-highway': 'Budapest night highway corridor, late 1990s to early 2000s, practical road infrastructure and sodium-vapor style lighting',
-  'interrogation-room': 'minimal Budapest interrogation room, late 1990s to early 2000s, controlled lighting, sparse furniture, period institutional finish',
-  budai: 'Budai upper-middle-class room, late 1990s to early 2000s, inherited grandmother-era furniture, heavy wood pieces, floral upholstery, framed family portraits, layered wallpaper, antique lamps, side tables, and a lived-in but elegant bourgeois domestic atmosphere',
-  bevasarlokozpont: 'interior of a Budapest H&M-style clothing store, 1999 to early 2000s, mirror-heavy layout, mannequins throughout, realistic retail staging',
-  'vaulted-cellar-server-room': 'vaulted brick cellar interior, underground bunker-like room, thick brick walls, cable bundles snaking across the walls, floor, and ceiling, monitors and machines lining the perimeter, old arcade gaming cabinets and retro amusement machines packed shoulder to shoulder, stacked crates and cluttered salvage piled high, central sofa and armchairs with a small coffee table, chaotic clutter everywhere, ominous satanic motifs and occult symbols, posters and old prints pinned across the walls, grimy industrial atmosphere with a lived-in, overloaded technology den feel',
-  'mcdonalds-east-eu-2000': 'East-European McDonalds interior, late 1990s to early 2000s, tiled floors, plastic seating, bright menu lightboxes, tray-based fast-food setup, era-authentic branding and lived-in public atmosphere',
-  'land-rover-interior-pov': 'inside a battered old Land Rover interior, POV from the cabin, torn upholstery, cracked dashboard, worn controls, dusty glass, exposed metal, off-road fatigue, cramped vehicle geometry',
-  'white-studio-sofa': 'bright white studio backdrop, clean minimalist composition, one oversized turn-of-the-century sofa as the only major furniture piece, scattered throw pillows and blankets on the floor, soft neutral palette, open negative space, polished modern calm',
-  'hotel-courtyard-pool-cocktail-bar': 'hotel inner courtyard with swimming pool under summer sunshine, ending in a cocktail bar at the far end of the pool',
-};
+export const LOCATION_PRESET_MAP: Record<string, string> = Object.fromEntries(
+  getPresetsByType('location').map((preset) => [preset.key, preset.prompt])
+);
 
 const SHOT_TEMPLATE_MAP: Record<ShotTemplate, string> = {
   'establishing-wide': 'Establishing wide shot; prioritize spatial readability of the full location.',
@@ -76,9 +59,7 @@ export function normalizeLocation(location: string): string {
 }
 
 function getLocationPresetPrompt(key: string): string {
-  return LOCATION_PRESET_MAP[key]
-    || getCustomPreset('location', key)?.prompt
-    || key;
+  return getPreset('location', key)?.prompt || key;
 }
 
 export function buildLocationProfileSummary(scene: SceneInput): string {
@@ -133,3 +114,5 @@ export function buildSceneBlock(scene: SceneInput): string {
   const actionLine = scene.actionPrompt ? `Action prompt: ${scene.actionPrompt}` : 'Action prompt: not provided';
   return `\n[SCENE]\nLocation:\n${buildLocationProfileSummary(scene)}\nMood: ${normalizeToPromptEnglish(mapMood(scene.mood))}\n${actionLine}\n\n${buildFramingBlock(scene)}\n\n${buildShotTemplateBlock(scene)}\n\n${buildContinuityBlock(scene)}\n\n[INTERACTION]\n${cast ? `Characters ${cast} are naturally integrated into the scene, with believable spacing and body language` : 'Character is naturally integrated into the scene, not posing artificially'}\n`;
 }
+
+export { MOOD_MAP };
