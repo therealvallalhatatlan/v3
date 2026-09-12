@@ -1,7 +1,7 @@
 import { SceneInput } from '../types/prompt';
+import { getCustomPreset } from './presetStore';
 
 export const CAMERA_PRESETS: Record<string | SceneInput["camera"], string> = {
-  // Eredeti presetek
   closeup:
     "cinematic close-up portrait, subject fills frame, razor focus on eyes and facial details, shallow depth of field, creamy bokeh, soft directional key light with subtle rim light, emotionally intense and painterly composition",
   wide:
@@ -32,8 +32,6 @@ export const CAMERA_PRESETS: Record<string | SceneInput["camera"], string> = {
     "extreme macro forensic detail framing, isolate tiny evidence-level textures with razor-sharp focus plane, dramatic depth falloff, investigative documentation mood, tactile material realism with disciplined composition",
   'pov-dashboard':
     "in-vehicle dashboard POV framing from driver-height perspective, windshield glare and practical reflections, analog late-1990s interior cues, forward road depth and motion context preserved, documentary driving-surveillance realism",
-
-  // Új, Vállalhatatlan (Gonzo/Postmodern) presetek
   'atm-lens':
     "ultra-wide distorted ATM hidden camera perspective, harsh greenish fluorescent lighting, low-res CRT monitor aesthetic, extreme paranoid surveillance framing, uncomfortably close midriff/face cutoff, digital artifacting",
   'fpv-kamikaze':
@@ -49,6 +47,8 @@ export const CAMERA_PRESETS: Record<string | SceneInput["camera"], string> = {
 };
 
 export function getCamera(camera: SceneInput["camera"] | string): string {
-  const presetKey = camera as keyof typeof CAMERA_PRESETS;
-  return `[CAMERA]\n${CAMERA_PRESETS[presetKey] || CAMERA_PRESETS.closeup}`;
+  const presetKey = String(camera || 'wide');
+  const builtIn = CAMERA_PRESETS[presetKey];
+  const custom = getCustomPreset('camera', presetKey);
+  return `[CAMERA]\n${builtIn || custom?.prompt || CAMERA_PRESETS.closeup}`;
 }
