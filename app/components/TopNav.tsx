@@ -13,11 +13,11 @@ export default function TopNav() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-40 w-full max-w-6xl mx-auto border-b border-gray-800 bg-black/95 backdrop-blur">
-      <div className="mx-auto flex min-h-16 w-full max-w-6xl items-center justify-between gap-6 px-4 py-3">
+    <header className="sticky top-0 z-40 w-full border-b border-gray-800 bg-black/90 backdrop-blur-xl">
+      <div className="mx-auto flex min-h-16 w-full max-w-7xl items-center justify-between gap-6 px-4 py-3 md:px-6">
         <Link
           href="/"
-          className="shrink-0 [font-family:var(--font-montserrat)] text-sm font-bold italic tracking-tight text-white md:text-base"
+          className="shrink-0 [font-family:var(--font-montserrat)] text-sm font-bold italic tracking-[-0.02em] text-white md:text-base"
         >
           Vállalhatatlan Illusztrációs Motor
         </Link>
@@ -29,7 +29,7 @@ export default function TopNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`whitespace-nowrap rounded px-3 py-2 text-xs font-semibold transition-colors md:text-sm ${
+                className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-medium transition-colors md:text-sm ${
                   active
                     ? 'bg-gray-800 text-white'
                     : 'text-gray-400 hover:bg-gray-900 hover:text-white'
