@@ -7,18 +7,18 @@ const TEXT_MAP: Record<string, string> = {
   'Create Character': 'Karakter létrehozása',
   Presets: 'Presetek',
   'Main navigation': 'Fő navigáció',
-  'Create Character': 'Karakter létrehozása',
   'Loading...': 'Betöltés...',
+  'Loading…': 'Betöltés…',
   'Generate Presets and Auto-Restore': 'Generálási presetek és automatikus visszaállítás',
   'Manage Location / Camera / Style': 'Helyszín / kamera / stílus kezelése',
   'Preset name': 'Preset neve',
   'Character presets': 'Karakterpresetek',
   'Global presets': 'Globális presetek',
   'Select...': 'Válassz...',
-  'Save New': 'Új mentése',
   Overwrite: 'Felülírás',
   Load: 'Betöltés',
   Delete: 'Törlés',
+  'Save New': 'Új mentése',
   'Set as default': 'Beállítás alapértelmezettként',
   Location: 'Helyszín',
   'Location Preset': 'Helyszínpreset',
@@ -51,10 +51,11 @@ const TEXT_MAP: Record<string, string> = {
   'Animate A': 'A animálása',
   'Animate B': 'B animálása',
   'No generated images yet.': 'Még nincs generált kép.',
-  'Generate': 'Generálj',
+  Generate: 'Generálás',
   'Select a source image first.': 'Először válassz forrásképet.',
   'Motion prompt is too short.': 'A mozgásleírás túl rövid.',
   'Failed to create animation job': 'Nem sikerült létrehozni az animációs feladatot.',
+  'Failed to cancel': 'Nem sikerült megszakítani a feladatot.',
   'Submitting…': 'Küldés…',
   'In Progress': 'Folyamatban',
   'Auto-refreshing every 5s…': 'Automatikus frissítés 5 másodpercenként…',
@@ -64,7 +65,6 @@ const TEXT_MAP: Record<string, string> = {
   'Source image': 'Forráskép',
   Selected: 'Kiválasztva',
   'Loading gallery...': 'Galéria betöltése...',
-  'No generated images yet.': 'Még nincs generált kép.',
   Prev: 'Előző',
   Next: 'Következő',
   Close: 'Bezárás',
@@ -90,6 +90,11 @@ function translateTextNode(node: Text) {
     return;
   }
 
+  if (trimmed === 'just now') {
+    node.nodeValue = 'épp most';
+    return;
+  }
+
   const relative = trimmed.match(/^(\d+)([mhd]) ago$/);
   if (relative) {
     const [, amount, unit] = relative;
@@ -105,9 +110,7 @@ function translateTextNode(node: Text) {
     failed: 'sikertelen',
     canceled: 'megszakítva',
   };
-  if (statusMap[trimmed]) {
-    node.nodeValue = statusMap[trimmed];
-  }
+  if (statusMap[trimmed]) node.nodeValue = statusMap[trimmed];
 }
 
 function translateAttributes(element: Element) {
@@ -127,9 +130,7 @@ function translateTree(root: Node) {
     node = walker.nextNode();
   }
   if (root instanceof Element) translateAttributes(root);
-  if (root instanceof ParentNode) {
-    root.querySelectorAll('*').forEach(translateAttributes);
-  }
+  if (root instanceof ParentNode) root.querySelectorAll('*').forEach(translateAttributes);
 }
 
 export default function HungarianUi() {
