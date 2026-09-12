@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const items = [
-  { href: '/', label: 'Characters' },
-  { href: '/character/new', label: 'Create Character' },
-  { href: '/presets', label: 'Presets' },
+  { href: '/', label: 'Karakterek' },
+  { href: '/character/new', label: 'Karakter létrehozása' },
+  { href: '/presets', label: 'Presetek' },
 ];
 
 export default function TopNav() {
@@ -17,12 +17,12 @@ export default function TopNav() {
       <div className="mx-auto flex min-h-16 w-full max-w-6xl items-center justify-between gap-6 px-4 py-3">
         <Link
           href="/"
-          className="shrink-0 font-sans text-sm font-bold italic tracking-tight text-white md:text-base"
+          className="shrink-0 font-montserrat text-sm font-bold italic tracking-tight text-white md:text-base"
         >
           Vállalhatatlan Illusztrációs Motor
         </Link>
 
-        <nav className="flex items-center gap-1 overflow-x-auto" aria-label="Main navigation">
+        <nav className="flex items-center gap-1 overflow-x-auto" aria-label="Fő navigáció">
           {items.map((item) => {
             const active = item.href === '/' ? pathname === '/' : pathname?.startsWith(item.href);
             return (
