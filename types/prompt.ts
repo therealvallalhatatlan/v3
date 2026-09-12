@@ -1,34 +1,15 @@
 export type CharacterDNA = {
   sourceCharacterId?: string;
   alias?: string;
-  identity: {
-    name: string;
-    archetype: string;
-  };
-  physical: {
-    face: string;
-    body: string;
-    posture: string;
-  };
-  outfit: {
-    top: string;
-    bottom: string;
-    accessories: string[];
-  };
+  identity: { name: string; archetype: string };
+  physical: { face: string; body: string; posture: string };
+  outfit: { top: string; bottom: string; accessories: string[] };
   anchors: string[];
-  texture: {
-    material: string;
-    wear: string;
-    dirt: string;
-  };
+  texture: { material: string; wear: string; dirt: string };
   energy: string;
   environmentAffinity: string[];
 };
 
-/**
- * Preset keys are runtime configuration. Built-in and custom keys are both
- * allowed, so adding a preset never requires a TypeScript type edit.
- */
 export type LocationPreset = string;
 export type StylePreset = string;
 export type ShotTemplate = 'establishing-wide' | 'medium-dialogue' | 'closeup-emotion' | 'over-shoulder' | 'insert-detail' | 'tracking-motion';
@@ -72,7 +53,5 @@ export type ScenePackageInput = {
   locationProfile: LocationProfile;
   continuity: LocationContinuity;
   shotTemplate: ShotTemplate;
-  bilingualInput?: {
-    sourceLanguage: 'hu' | 'en' | 'mixed';
-  };
+  bilingualInput?: { sourceLanguage: 'hu' | 'en' | 'mixed' };
 };
