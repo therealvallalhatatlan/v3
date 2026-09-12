@@ -17,7 +17,7 @@ export default function TopNav() {
       <div className="mx-auto flex min-h-16 w-full max-w-6xl items-center justify-between gap-6 px-4 py-3">
         <Link
           href="/"
-          className="shrink-0 font-montserrat text-sm font-bold italic tracking-tight text-white md:text-base"
+          className="shrink-0 [font-family:var(--font-montserrat)] text-sm font-bold italic tracking-tight text-white md:text-base"
         >
           Vállalhatatlan Illusztrációs Motor
         </Link>
