@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { getCharacterById } from '../../../lib/storage';
 import { generateImage } from '../../../lib/gemini';
@@ -9,6 +8,7 @@ import { buildCharacterDNAFromCharacter } from '../../../lib/promptBuilder';
 import { AspectRatio16x9, LocationPreset, SceneInput, ScenePackageInput, ShotTemplate } from '../../../types/prompt';
 import { GeneratedImageMeta } from '../../../lib/storage';
 import { normalizeToPromptEnglish } from '../../../lib/sceneMapper';
+import { getCustomPreset } from '../../../lib/presetStore';
 
 function clampIntensity(value: unknown): number {
   const parsed = Number(value);
@@ -41,10 +41,9 @@ function selectBalancedReferenceImages(
 }
 
 const ALLOWED_LOCATION_PRESETS: LocationPreset[] = [
-  '', '', 'urban-street', '', 'urban-street', 'apartment', 'office', 'warehouse',
-  'rooftop', 'subway', 'forest', 'industrial-yard', 'night-highway', 'interrogation-room',
-  'budai', 'bevasarlokozpont', 'vaulted-cellar-server-room', 'mcdonalds-east-eu-2000',
-  'land-rover-interior-pov', 'white-studio-sofa', 'hotel-courtyard-pool-cocktail-bar',
+  '', 'urban-street', 'apartment', 'office', 'warehouse', 'rooftop', 'subway', 'forest', 'industrial-yard',
+  'night-highway', 'interrogation-room', 'budai', 'bevasarlokozpont', 'vaulted-cellar-server-room',
+  'mcdonalds-east-eu-2000', 'land-rover-interior-pov', 'white-studio-sofa', 'hotel-courtyard-pool-cocktail-bar',
 ];
 
 const ALLOWED_SHOT_TEMPLATES: ShotTemplate[] = [
@@ -53,7 +52,7 @@ const ALLOWED_SHOT_TEMPLATES: ShotTemplate[] = [
 
 const ALLOWED_ASPECT_RATIOS: AspectRatio16x9[] = ['landscape-16-9', 'portrait-9-16'];
 
-const LOCATION_PRESET_FALLBACK: Record<LocationPreset, string> = {
+const LOCATION_PRESET_FALLBACK: Record<string, string> = {
   '': '',
   'urban-street': 'urban street at cinematic depth',
   apartment: 'lived-in apartment interior', office: 'office interior with practical lighting',
@@ -92,7 +91,8 @@ function normalizeScenePackage(raw: any): ScenePackageInput | undefined {
   if (!raw || typeof raw !== 'object' || !raw.locationProfile || typeof raw.locationProfile !== 'object') return undefined;
   const presetRaw = String(raw.locationProfile.preset || '').trim() as LocationPreset;
   const shotTemplateRaw = String(raw.shotTemplate || '').trim() as ShotTemplate;
-  if (!ALLOWED_LOCATION_PRESETS.includes(presetRaw) || !ALLOWED_SHOT_TEMPLATES.includes(shotTemplateRaw)) return undefined;
+  const validLocationPreset = ALLOWED_LOCATION_PRESETS.includes(presetRaw) || Boolean(getCustomPreset('location', presetRaw));
+  if (!validLocationPreset || !ALLOWED_SHOT_TEMPLATES.includes(shotTemplateRaw)) return undefined;
   const locationProfile = {
     preset: presetRaw,
     detail: normalizeText(raw.locationProfile.detail, 600), geometry: normalizeText(raw.locationProfile.geometry, 600),
@@ -118,9 +118,9 @@ function resolveLocationText(location: unknown, scenePackage?: ScenePackageInput
   const legacyLocation = normalizeText(location, 800);
   if (scenePackage?.locationProfile?.detail) return scenePackage.locationProfile.detail;
   if (legacyLocation) return legacyLocation;
-  const preset = scenePackage?.locationProfile?.preset;
-  if (preset && preset in LOCATION_PRESET_FALLBACK) return LOCATION_PRESET_FALLBACK[preset];
-  return 'cinematic scene location';
+  const preset = String(scenePackage?.locationProfile?.preset || '');
+  if (preset in LOCATION_PRESET_FALLBACK) return LOCATION_PRESET_FALLBACK[preset];
+  return getCustomPreset('location', preset)?.prompt || 'cinematic scene location';
 }
 
 export async function POST(req: NextRequest) {
@@ -136,13 +136,14 @@ export async function POST(req: NextRequest) {
       const resolved = character!;
       return textOnly ? { ...resolved, imagePaths: [] } : resolved;
     });
-    let cameraKey = camera;
-    if (camera === 'close-up') cameraKey = 'closeup';
+    let cameraKey = String(camera || 'wide');
+    if (cameraKey === 'close-up') cameraKey = 'closeup';
     const allowedCameras = ['closeup','wide','fisheye','handheld','dutch','birdseye','overtheshoulder','wormseye','speedcam1999','security-cam','telephoto-stakeout','cctv-distorted','reflection-pov','macro-forensic','pov-dashboard'];
-    if (!allowedCameras.includes(cameraKey)) cameraKey = 'wide';
+    if (!allowedCameras.includes(cameraKey) && !getCustomPreset('camera', cameraKey)) cameraKey = 'wide';
     const allowedStyles = ['gritty','noir-bw','vhs-glitch','neo-noir-neon','dreamy-ethereal','graphic-novel','police-speed-photo'];
-    const styleKey = allowedStyles.includes(style) ? style : 'gritty';
-    const compareStyleKey = allowedStyles.includes(compareStyle) ? compareStyle : null;
+    const styleKey = allowedStyles.includes(String(style)) || getCustomPreset('style', String(style || '')) ? String(style) : 'gritty';
+    const compareStyleValue = String(compareStyle || '').trim();
+    const compareStyleKey = (allowedStyles.includes(compareStyleValue) || getCustomPreset('style', compareStyleValue)) ? compareStyleValue : null;
     const aspectRatioKey = ALLOWED_ASPECT_RATIOS.includes(aspectRatio as AspectRatio16x9) ? aspectRatio as AspectRatio16x9 : 'landscape-16-9';
     const intensity = clampIntensity(styleIntensity);
     const normalizedScenePackage = normalizeScenePackage(scenePackage);
