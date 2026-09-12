@@ -160,17 +160,14 @@ export function buildCharacterGroupKey(characterIds: string[]): string {
   return normalized.join('__');
 }
 
-
 export function getAllCharacters(): Character[] {
   initStorage();
   return readJSON<Character[]>(CHAR_PATH);
 }
 
-
 export function getCharacterById(id: string): Character | undefined {
   return getAllCharacters().find((c) => c.id === id);
 }
-
 
 export function saveCharacter(character: Character): void {
   initStorage();
@@ -179,7 +176,6 @@ export function saveCharacter(character: Character): void {
   writeJSON(CHAR_PATH, chars);
 }
 
-
 export function updateCharacter(character: Character): void {
   initStorage();
   let chars = getAllCharacters();
@@ -187,14 +183,19 @@ export function updateCharacter(character: Character): void {
   writeJSON(CHAR_PATH, chars);
 }
 
-
 export function deleteCharacter(id: string): void {
   initStorage();
-  let chars = getAllCharacters();
-  chars = chars.filter((c) => c.id !== id);
-  writeJSON(CHAR_PATH, chars);
-}
+  const chars = getAllCharacters();
+  writeJSON(CHAR_PATH, chars.filter((c) => c.id !== id));
 
+  // Remove character-scoped source images and generated media as well.
+  for (const baseDir of [IMAGE_DIR, GENERATED_DIR]) {
+    const characterDir = getStoragePath(path.join(baseDir, id));
+    if (fs.existsSync(characterDir)) {
+      fs.rmSync(characterDir, { recursive: true, force: true });
+    }
+  }
+}
 
 export function listGeneratedImages(characterId: string): string[] {
   const dir = path.join(GENERATED_DIR, characterId);
@@ -203,7 +204,6 @@ export function listGeneratedImages(characterId: string): string[] {
   if (!fs.existsSync(fullDir)) return [];
   return fs.readdirSync(fullDir).map((f) => path.posix.join('/', dir, f));
 }
-
 
 export async function saveCharacterImages(files: File[], characterId: string): Promise<string[]> {
   const dir = path.join(IMAGE_DIR, characterId);
