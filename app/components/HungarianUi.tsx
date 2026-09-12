@@ -223,7 +223,9 @@ function translateTree(root: Node) {
     node = walker.nextNode();
   }
   if (root instanceof Element) translateAttributes(root);
-  if (root instanceof ParentNode) root.querySelectorAll('*').forEach(translateAttributes);
+  if ('querySelectorAll' in root && typeof (root as ParentNode).querySelectorAll === 'function') {
+    (root as ParentNode).querySelectorAll('*').forEach(translateAttributes);
+  }
 }
 
 export default function HungarianUi() {
