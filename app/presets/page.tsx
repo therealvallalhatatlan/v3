@@ -15,9 +15,9 @@ type Preset = {
 };
 
 const TYPES: { value: PresetType; label: string }[] = [
-  { value: 'location', label: 'Location Preset' },
-  { value: 'camera', label: 'Camera' },
-  { value: 'style', label: 'Style' },
+  { value: 'location', label: 'Helyszínpreset' },
+  { value: 'camera', label: 'Kamera' },
+  { value: 'style', label: 'Stílus' },
 ];
 
 const EMPTY = { type: 'location' as PresetType, key: '', label: '', prompt: '', negative: '' };
@@ -38,10 +38,10 @@ export default function PresetsPage() {
     try {
       const response = await fetch('/api/presets', { cache: 'no-store' });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to load presets');
+      if (!response.ok) throw new Error(data.error || 'Nem sikerült betölteni a preseteket.');
       setPresets(Array.isArray(data.all) ? data.all : []);
     } catch (e: any) {
-      setError(e.message || 'Failed to load presets');
+      setError(e.message || 'Nem sikerült betölteni a preseteket.');
     } finally {
       setLoading(false);
     }
@@ -82,13 +82,13 @@ export default function PresetsPage() {
         body: JSON.stringify(payload),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to save preset');
+      if (!response.ok) throw new Error(data.error || 'Nem sikerült menteni a presetet.');
       await load();
       const saved = data.preset as Preset;
-      setMessage(editing ? 'Preset updated.' : `Preset created: ${saved.label}`);
+      setMessage(editing ? 'Preset frissítve.' : `Preset létrehozva: ${saved.label}`);
       resetForm(saved.type);
     } catch (e: any) {
-      setError(e.message || 'Failed to save preset');
+      setError(e.message || 'Nem sikerült menteni a presetet.');
     } finally {
       setSaving(false);
     }
@@ -104,30 +104,30 @@ export default function PresetsPage() {
         body: JSON.stringify({ id: preset.id, action: actionName }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || `Failed to ${actionName} preset`);
+      if (!response.ok) throw new Error(data.error || 'A művelet nem sikerült.');
       await load();
       if (actionName === 'duplicate' && data.preset) editPreset(data.preset);
-      setMessage(actionName === 'reset' ? `${preset.label} reset to factory defaults.` : `${preset.label} duplicated.`);
+      setMessage(actionName === 'reset' ? `${preset.label} visszaállítva gyári értékekre.` : `${preset.label} lemásolva.`);
     } catch (e: any) {
-      setError(e.message || 'Preset action failed');
+      setError(e.message || 'A preset művelet nem sikerült.');
     }
   };
 
   const remove = async (preset: Preset) => {
     if (preset.builtin) {
-      setMessage('Built-in presets cannot be deleted. Use Reset, or Duplicate and edit the copy.');
+      setMessage('A beépített presetek nem törölhetők. Használd a Visszaállítás gombot, vagy másold le és szerkeszd a másolatot.');
       return;
     }
-    if (!window.confirm(`Delete "${preset.label}"?`)) return;
+    if (!window.confirm(`Biztosan törlöd ezt: „${preset.label}”?`)) return;
     try {
       const response = await fetch(`/api/presets?id=${encodeURIComponent(preset.id)}`, { method: 'DELETE' });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to delete preset');
+      if (!response.ok) throw new Error(data.error || 'Nem sikerült törölni a presetet.');
       if (editing?.id === preset.id) resetForm(preset.type);
       await load();
-      setMessage('Preset deleted.');
+      setMessage('Preset törölve.');
     } catch (e: any) {
-      setError(e.message || 'Failed to delete preset');
+      setError(e.message || 'Nem sikerült törölni a presetet.');
     }
   };
 
@@ -136,11 +136,11 @@ export default function PresetsPage() {
       <div className="mx-auto max-w-7xl">
         <header className="flex flex-wrap items-start justify-between gap-4 mb-8">
           <div>
-            <div className="text-xs uppercase tracking-[0.25em] text-indigo-400 mb-2">Generation Configuration</div>
-            <h1 className="text-3xl md:text-4xl font-bold">Preset Manager</h1>
-            <p className="text-sm text-gray-400 mt-2 max-w-3xl">All Location, Camera and Style presets live in one runtime catalog. Built-in presets are editable; Reset restores their original values. Duplicate creates an independent custom preset.</p>
+            <div className="text-xs uppercase tracking-[0.25em] text-indigo-400 mb-2">Generálási konfiguráció</div>
+            <h1 className="text-3xl md:text-4xl font-bold">Presetkezelő</h1>
+            <p className="text-sm text-gray-400 mt-2 max-w-3xl">Az összes helyszín-, kamera- és stíluspreset egy közös, futásidejű katalógusban él. A beépített presetek szerkeszthetők; a Visszaállítás visszaadja az eredeti értékeket. A Másolás önálló egyedi presetet hoz létre.</p>
           </div>
-          <a href="/" className="text-sm px-3 py-2 rounded border border-gray-700 hover:border-gray-500">← Characters</a>
+          <a href="/" className="text-sm px-3 py-2 rounded border border-gray-700 hover:border-gray-500">← Karakterek</a>
         </header>
 
         <div className="flex gap-1 p-1 bg-gray-900 border border-gray-800 rounded-lg mb-6 max-w-xl">
@@ -154,18 +154,18 @@ export default function PresetsPage() {
         <div className="grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-6">
           <section className="bg-gray-900 border border-gray-800 rounded-xl p-5 h-fit">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold">{editing ? `Edit ${editing.label}` : `Add ${TYPES.find((item) => item.value === type)?.label}`}</h2>
-              {editing && <span className="text-[10px] uppercase tracking-wide text-indigo-400">{editing.builtin ? 'Built-in' : 'Custom'}</span>}
+              <h2 className="font-bold">{editing ? `Szerkesztés: ${editing.label}` : `Új ${TYPES.find((item) => item.value === type)?.label}`}</h2>
+              {editing && <span className="text-[10px] uppercase tracking-wide text-indigo-400">{editing.builtin ? 'Beépített' : 'Egyedi'}</span>}
             </div>
 
             <form onSubmit={save} className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold mb-1">Key</label>
-                <input required disabled={Boolean(editing?.builtin)} value={form.key} onChange={(e) => setForm((prev) => ({ ...prev, key: e.target.value }))} placeholder={type === 'location' ? 'abandoned-mall' : 'disposable-camera-flash'} className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm disabled:opacity-50" />
-                <div className="text-[11px] text-gray-500 mt-1">2–64 chars, lowercase letters, numbers and hyphens. Built-in keys are fixed so existing saved forms keep working.</div>
+                <label className="block text-xs font-semibold mb-1">Kulcs</label>
+                <input required disabled={Boolean(editing?.builtin)} value={form.key} onChange={(e) => setForm((prev) => ({ ...prev, key: e.target.value }))} placeholder={type === 'location' ? 'elhagyott-plaza' : 'egyszer-hasznalatos-vaku'} className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm disabled:opacity-50" />
+                <div className="text-[11px] text-gray-500 mt-1">2–64 karakter, kisbetűk, számok és kötőjelek. A beépített kulcsok rögzítve vannak, hogy a korábban mentett űrlapok továbbra is működjenek.</div>
               </div>
               <div>
-                <label className="block text-xs font-semibold mb-1">Label</label>
+                <label className="block text-xs font-semibold mb-1">Megjelenő név</label>
                 <input required value={form.label} onChange={(e) => setForm((prev) => ({ ...prev, label: e.target.value }))} className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" />
               </div>
               <div>
@@ -174,15 +174,15 @@ export default function PresetsPage() {
               </div>
               {type === 'style' && (
                 <div>
-                  <label className="block text-xs font-semibold mb-1">Negative prompt</label>
+                  <label className="block text-xs font-semibold mb-1">Negatív prompt</label>
                   <textarea rows={5} value={form.negative} onChange={(e) => setForm((prev) => ({ ...prev, negative: e.target.value }))} className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" />
                 </div>
               )}
               {error && <div className="text-sm text-red-300 bg-red-950/40 border border-red-900 rounded p-2">{error}</div>}
               {message && <div className="text-sm text-green-300 bg-green-950/30 border border-green-900 rounded p-2">{message}</div>}
               <div className="flex flex-wrap gap-2">
-                <button type="submit" disabled={saving} className="flex-1 min-w-[150px] py-2 rounded bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-sm font-semibold">{saving ? 'Saving…' : editing ? 'Save changes' : 'Add preset'}</button>
-                {editing && <button type="button" onClick={() => resetForm()} className="px-4 py-2 rounded border border-gray-700 hover:border-gray-500 text-sm">Cancel</button>}
+                <button type="submit" disabled={saving} className="flex-1 min-w-[150px] py-2 rounded bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-sm font-semibold">{saving ? 'Mentés…' : editing ? 'Módosítások mentése' : 'Preset hozzáadása'}</button>
+                {editing && <button type="button" onClick={() => resetForm()} className="px-4 py-2 rounded border border-gray-700 hover:border-gray-500 text-sm">Mégse</button>}
               </div>
             </form>
           </section>
@@ -191,28 +191,28 @@ export default function PresetsPage() {
             <div className="flex items-end justify-between gap-4 mb-4">
               <div>
                 <h2 className="text-xl font-bold">{TYPES.find((item) => item.value === type)?.label}</h2>
-                <p className="text-xs text-gray-500 mt-1">{filtered.length} presets</p>
+                <p className="text-xs text-gray-500 mt-1">{filtered.length} preset</p>
               </div>
-              <button type="button" onClick={load} className="text-xs px-3 py-2 rounded border border-gray-700 hover:border-gray-500">Refresh</button>
+              <button type="button" onClick={load} className="text-xs px-3 py-2 rounded border border-gray-700 hover:border-gray-500">Frissítés</button>
             </div>
 
-            {loading ? <div className="text-sm text-gray-500">Loading…</div> : (
+            {loading ? <div className="text-sm text-gray-500">Betöltés…</div> : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 {filtered.map((preset) => (
                   <article key={preset.id} className={`rounded-xl border p-4 ${preset.builtin ? 'border-gray-800 bg-gray-800/40' : 'border-indigo-900/60 bg-indigo-950/20'}`}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <h3 className="font-semibold">{preset.label}</h3>
-                        <div className="text-[11px] text-gray-500 mt-1">{preset.key || '(empty key)'}</div>
+                        <div className="text-[11px] text-gray-500 mt-1">{preset.key || '(nincs kulcs)'}</div>
                       </div>
-                      <span className={`text-[10px] uppercase tracking-wide ${preset.builtin ? 'text-gray-500' : 'text-indigo-400'}`}>{preset.builtin ? 'Built-in' : 'Custom'}</span>
+                      <span className={`text-[10px] uppercase tracking-wide ${preset.builtin ? 'text-gray-500' : 'text-indigo-400'}`}>{preset.builtin ? 'Beépített' : 'Egyedi'}</span>
                     </div>
-                    <div className="mt-3 text-xs text-gray-400 whitespace-pre-wrap line-clamp-6">{preset.prompt || '(empty prompt)'}</div>
+                    <div className="mt-3 text-xs text-gray-400 whitespace-pre-wrap line-clamp-6">{preset.prompt || '(nincs prompt)'}</div>
                     <div className="flex flex-wrap gap-2 mt-4">
-                      <button type="button" onClick={() => editPreset(preset)} className="px-3 py-1.5 rounded bg-gray-700 hover:bg-gray-600 text-xs">Edit</button>
-                      <button type="button" onClick={() => action(preset, 'duplicate')} className="px-3 py-1.5 rounded border border-gray-700 hover:border-gray-500 text-xs">Duplicate</button>
-                      {preset.builtin && <button type="button" onClick={() => action(preset, 'reset')} className="px-3 py-1.5 rounded border border-yellow-900/70 hover:border-yellow-600 text-yellow-300 text-xs">Reset</button>}
-                      <button type="button" onClick={() => remove(preset)} className="px-3 py-1.5 rounded border border-gray-700 hover:border-red-500 hover:text-red-300 text-xs">{preset.builtin ? 'Protected' : 'Delete'}</button>
+                      <button type="button" onClick={() => editPreset(preset)} className="px-3 py-1.5 rounded bg-gray-700 hover:bg-gray-600 text-xs">Szerkesztés</button>
+                      <button type="button" onClick={() => action(preset, 'duplicate')} className="px-3 py-1.5 rounded border border-gray-700 hover:border-gray-500 text-xs">Másolás</button>
+                      {preset.builtin && <button type="button" onClick={() => action(preset, 'reset')} className="px-3 py-1.5 rounded border border-yellow-900/70 hover:border-yellow-600 text-yellow-300 text-xs">Visszaállítás</button>}
+                      <button type="button" onClick={() => remove(preset)} className="px-3 py-1.5 rounded border border-gray-700 hover:border-red-500 hover:text-red-300 text-xs">{preset.builtin ? 'Védett' : 'Törlés'}</button>
                     </div>
                   </article>
                 ))}
@@ -222,8 +222,8 @@ export default function PresetsPage() {
         </div>
 
         <section className="mt-6 rounded-xl border border-gray-800 bg-gray-950 p-5 text-sm text-gray-400">
-          <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">Persistence</div>
-          <p>The catalog is stored at <code className="text-gray-300">&lt;STORAGE_DIR&gt;/presets.json</code>. The first server read automatically migrates the existing hard-coded presets into this file. After that, the runtime catalog is the source of truth for generation.</p>
+          <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">Tartós tárolás</div>
+          <p>A katalógus helye: <code className="text-gray-300">&lt;STORAGE_DIR&gt;/presets.json</code>. Az első szerveroldali olvasás automatikusan átmigrálja a korábbi beépített preseteket ebbe a fájlba. Ezután a futásidejű katalógus az igazodási pont a generáláshoz.</p>
         </section>
       </div>
     </main>
