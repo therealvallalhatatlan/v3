@@ -74,7 +74,7 @@ For multi-character generations, the prompt additionally enforces:
 - Characters remain visually distinct
 - Faces and heads stay inside the frame
 - Widescreen compositions leave adequate headroom
-- Bodies, hands, feet, masks, and distinctive costume details should not be unnecessarily cropped
+- Bodies, hands, feet, masks, and distinctive costume elements should not be unnecessarily cropped
 - Characters must not be merged, replaced, or dropped
 
 ### Scene / continuity controls
@@ -114,13 +114,13 @@ Built-in location presets currently include examples such as:
 
 ### Camera presets
 
-The generation API validates a fixed set of camera modes, including:
+The generation API includes built-in camera modes such as:
 
-`closeup`, `wide`, `fisheye`, `handheld`, `dutch`, `birdseye`, `overtheshoulder`, `wormseye`, `speedcam1999`, `security-cam`, `telephoto-stakeout`, `cctv-distorted`, `reflection-pov`, `macro-forensic`, `pov-dashboard`
+`closeup`, `wide`, `fisheye`, `handheld`, `dutch`, `birdseye`, `overtheshoulder`, `wormseye`, `speedcam1999`, `security-cam`, `telephoto-stakeout`, `cctv-distorted`, `reflection-pov`, `macro-forensic`, `pov-dashboard`, plus additional built-in Gonzo/Postmodern variants.
 
 ### Visual styles
 
-The generation API currently exposes these styles:
+Built-in styles currently include:
 
 - `gritty`
 - `noir-bw`
@@ -131,6 +131,49 @@ The generation API currently exposes these styles:
 - `police-speed-photo`
 
 The selected style can be combined with a numeric intensity value from `0` to `100`.
+
+### Dynamic preset manager
+
+Location Presets, Camera presets, and Styles can now be extended **without editing TypeScript source code**.
+
+Open:
+
+```text
+/presets
+```
+
+The Preset Manager lets you:
+
+- Add custom Location Presets
+- Add custom Camera presets
+- Add custom Styles
+- Edit custom preset label/prompt data
+- Delete custom presets
+- Keep built-in presets read-only
+
+Each custom preset has:
+
+- `key` - machine-readable identifier, for example `abandoned-mall`
+- `label` - human-readable name shown in the UI
+- `prompt` - prompt block injected into generation
+- `negative` - optional style-specific negative prompt
+
+Custom presets are stored at:
+
+```text
+<STORAGE_DIR>/presets.json
+```
+
+The generator loads them at runtime. Creating a new preset therefore does not require a source-code change or a new preset type declaration.
+
+The dynamic preset API is available through:
+
+- `GET /api/presets`
+- `POST /api/presets`
+- `PATCH /api/presets`
+- `DELETE /api/presets?id=<presetId>`
+
+The generator validates custom camera, style, and location keys server-side before generation.
 
 ### Image normalization and storage
 
@@ -243,7 +286,7 @@ REPLICATE_INPUT_DURATION_KEY=duration
 | Variable | Required | Purpose |
 |---|---|---|
 | `GEMINI_API_KEY` | Yes | Google Gemini image-generation API key |
-| `STORAGE_DIR` | Yes in a normal setup | Root directory for characters, reference images, generated images, and animation files |
+| `STORAGE_DIR` | Yes in a normal setup | Root directory for characters, reference images, generated images, animation files, and custom presets |
 | `REPLICATE_API_TOKEN` | Only for video | Replicate authentication token |
 | `REPLICATE_VIDEO_MODEL_VERSION` | Only for video | Replicate model slug (`owner/name`) or model version identifier |
 | `REPLICATE_API_BASE_URL` | No | Replicate API base URL override |
@@ -260,6 +303,7 @@ The application creates required directories automatically when storage is initi
 ```text
 storage/
 ├── characters.json
+├── presets.json
 ├── images/
 ├── generated/
 └── ...
@@ -299,6 +343,12 @@ Then open:
 http://localhost:3000
 ```
 
+The preset manager is available at:
+
+```text
+http://localhost:3000/presets
+```
+
 ## Production build
 
 Build the application:
@@ -332,10 +382,13 @@ app/
 │   ├── characters/
 │   ├── generate/
 │   ├── generated/
-│   └── gemini-models/
+│   ├── gemini-models/
+│   └── presets/
 ├── character/
 │   ├── new/
 │   └── [id]/
+├── presets/
+│   └── page.tsx
 ├── error.tsx
 ├── global-error.tsx
 ├── globals.css
@@ -349,6 +402,7 @@ lib/
 ├── fileUtils.ts
 ├── gemini.ts
 ├── paths.ts
+├── presetStore.ts
 ├── promptBuilder.ts
 ├── sceneMapper.ts
 ├── storage.ts
@@ -365,11 +419,14 @@ types/
 `/`  
 Character index. Lists the stored characters and links to their workspaces.
 
+`/presets`  
+Preset Manager for adding and maintaining custom Location, Camera, and Style presets.
+
 `/character/new`  
 Create a new character from description, traits, and 1–5 uploaded reference images.
 
 `/character/[id]`  
-Character workspace containing generated imagery, gallery functionality, and animation controls.
+Character workspace containing generated imagery, gallery functionality, animation controls, and the dynamic preset selections.
 
 ### API routes
 
@@ -387,6 +444,18 @@ Serve generated image assets from local storage.
 
 `GET /api/generated/[characterId]/list`  
 List generated images for a character.
+
+`GET /api/presets`  
+Return built-in and custom Location, Camera, and Style preset definitions.
+
+`POST /api/presets`  
+Create a custom preset.
+
+`PATCH /api/presets`  
+Update a custom preset.
+
+`DELETE /api/presets?id=<presetId>`  
+Delete a custom preset.
 
 `POST /api/animations/create`  
 Create a Replicate animation job.
@@ -432,7 +501,7 @@ A generation request can contain fields such as:
 }
 ```
 
-The endpoint validates IDs, camera/style selections, aspect ratio, scene package values, and style intensity before prompt generation.
+The endpoint validates IDs, camera/style selections, aspect ratio, scene package values, and style intensity before prompt generation. Custom preset keys are accepted when they exist in the preset store.
 
 ## How prompt generation works
 
@@ -469,6 +538,12 @@ Characters are stored in:
 <STORAGE_DIR>/characters.json
 ```
 
+Custom presets are stored in:
+
+```text
+<STORAGE_DIR>/presets.json
+```
+
 Reference images are stored under:
 
 ```text
@@ -501,6 +576,12 @@ Animation jobs and video outputs live under:
 
 Character creation accepts up to 5 uploaded images. The Gemini generation layer uses at most 6 reference images in a single request and balances selection across characters for multi-character scenes.
 
+### Dynamic presets
+
+Custom presets are deliberately stored outside the repository source tree. The built-in prompt definitions remain in `lib/camera.ts`, `lib/sceneMapper.ts`, and `lib/style.ts`, while `lib/presetStore.ts` loads custom additions from `<STORAGE_DIR>/presets.json`.
+
+This keeps the application portable and means a prompt designer can create new presets through `/presets` without creating another code commit.
+
 ### Aspect ratio handling
 
 Gemini is explicitly requested to render either `16:9` or `9:16`. The application then uses Sharp to normalize the stored image dimensions to a fixed target size.
@@ -527,6 +608,14 @@ Animation also requires `REPLICATE_VIDEO_MODEL_VERSION`. The adapter accepts eit
 
 Check `STORAGE_DIR` and verify that the Node.js process has read/write access. On Windows, confirm that the path exists and is accessible by the account running the development server.
 
+### A new preset does not appear in the generator
+
+Use the Preset Manager's **Refresh** button, then refresh the character workspace. The `/api/presets` endpoint is explicitly dynamic and is not statically cached.
+
+### A custom preset is rejected by generation
+
+Make sure the preset still exists in `<STORAGE_DIR>/presets.json`, and that its key uses only lowercase letters, numbers, and hyphens. The generator validates custom keys server-side.
+
 ### Generated images are cropped unexpectedly
 
 The application normalizes generated images with Sharp using `fit: cover`. The crop is centered. For multi-character landscape scenes, the prompt builder explicitly asks the model to keep both heads, faces, and bodies comfortably inside the frame before post-processing.
@@ -537,9 +626,9 @@ The animation adapter surfaces provider billing failures as a `402` response. Ch
 
 ## Security considerations
 
-This project currently stores assets on the server filesystem and exposes generation functionality through application routes. Before deploying it as a public multi-user service, consider adding:
+This project currently stores assets on the server filesystem and exposes generation and preset management through application routes. Before deploying it as a public multi-user service, consider adding:
 
-- Authentication and authorization
+- Authentication and authorization, especially for `/presets`
 - Per-user storage isolation
 - Request rate limiting
 - Upload size/type validation
@@ -565,6 +654,7 @@ Notable limitations of the current architecture:
 - Generation is performed synchronously in the image-generation route
 - Video processing depends on an external Replicate model configuration
 - Production deployment requires persistent storage or a storage-adapter rewrite
+- Preset Manager access is currently not authenticated
 
 ## License
 
