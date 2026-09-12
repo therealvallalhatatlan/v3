@@ -46,14 +46,10 @@ export default function Gallery({ characterId, onUseForAnimation }: Props) {
       .finally(() => setLoading(false));
   }, [characterId]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [characterId]);
+  useEffect(() => setCurrentPage(1), [characterId]);
 
   useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
+    if (currentPage > totalPages) setCurrentPage(totalPages);
   }, [currentPage, totalPages]);
 
   useEffect(() => {
@@ -62,9 +58,7 @@ export default function Gallery({ characterId, onUseForAnimation }: Props) {
         setSelectedIndex(null);
         return;
       }
-      if (selectedIndex === null || images.length === 0) {
-        return;
-      }
+      if (selectedIndex === null || images.length === 0) return;
       if (event.key === 'ArrowRight') {
         setSelectedIndex((prev) => (prev === null ? 0 : (prev + 1) % images.length));
         return;
@@ -79,163 +73,65 @@ export default function Gallery({ characterId, onUseForAnimation }: Props) {
 
   const selectedImage = selectedIndex === null ? null : images[selectedIndex] ?? null;
 
-  if (loading) return <div>Loading gallery...</div>;
-  if (!images.length) return <div className="text-gray-500">No generated images yet.</div>;
+  if (loading) return <div>Galéria betöltése...</div>;
+  if (!images.length) return <div className="text-gray-500">Még nincs generált kép.</div>;
 
   return (
     <>
       <div className="flex items-center justify-between mt-4 mb-2 text-xs text-gray-400">
-        <div>Page {currentPage} / {totalPages}</div>
+        <div>{currentPage}. oldal / {totalPages}</div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-            disabled={currentPage <= 1}
-            className="px-2 py-1 rounded border border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:border-gray-500"
-          >
-            Prev
-          </button>
-          <button
-            type="button"
-            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-            disabled={currentPage >= totalPages}
-            className="px-2 py-1 rounded border border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:border-gray-500"
-          >
-            Next
-          </button>
+          <button type="button" onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))} disabled={currentPage <= 1} className="px-2 py-1 rounded border border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:border-gray-500">Előző</button>
+          <button type="button" onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))} disabled={currentPage >= totalPages} className="px-2 py-1 rounded border border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:border-gray-500">Következő</button>
         </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8">
         {pageImages.map((img, index) => (
           <div key={img.filename} className="bg-gray-800 rounded shadow p-2 flex flex-col items-center">
-            <button
-              type="button"
-              onClick={() => setSelectedIndex(pageStart + index)}
-              className="w-full focus:outline-none focus:ring-2 focus:ring-gray-300 rounded"
-              aria-label={`Open ${img.filename} in full size`}
-            >
+            <button type="button" onClick={() => setSelectedIndex(pageStart + index)} className="w-full focus:outline-none focus:ring-2 focus:ring-gray-300 rounded" aria-label="Kép előnézetének megnyitása">
               <img src={img.url} alt={img.filename} className="rounded mb-2 max-h-48 object-contain w-full" />
             </button>
-            <div className="text-xs text-gray-400 mb-1">{new Date(img.created).toLocaleString()}</div>
-            {img.meta?.style && (
-              <div className="text-[11px] text-gray-300 mb-1">Style: {img.meta.style}</div>
-            )}
-            {typeof img.meta?.styleIntensity === 'number' && (
-              <div className="text-[11px] text-gray-400 mb-1">Intensity: {img.meta.styleIntensity}</div>
-            )}
-            {img.meta?.camera && (
-              <div className="text-[11px] text-gray-500 mb-1">Camera: {img.meta.camera}</div>
-            )}
-            {img.meta?.aspectRatio && (
-              <div className="text-[11px] text-gray-500 mb-1">Aspect: {img.meta.aspectRatio}</div>
-            )}
-            {img.meta?.locationProfileId && (
-              <div className="text-[11px] text-emerald-400/90 mb-1">Location Profile: {img.meta.locationProfileId}</div>
-            )}
-            {img.meta?.shotTemplateId && (
-              <div className="text-[11px] text-emerald-300/80 mb-1">Shot: {img.meta.shotTemplateId}</div>
-            )}
-            {img.meta?.locationFingerprint && (
-              <div className="text-[11px] text-gray-500 mb-1">Fingerprint: {img.meta.locationFingerprint}</div>
-            )}
-            {Array.isArray(img.meta?.characterIds) && img.meta!.characterIds!.length > 1 && (
-              <div className="text-[11px] text-gray-500 mb-1">
-                Cast: {img.meta!.characterIds!.join(', ')}
-              </div>
-            )}
+            <div className="text-xs text-gray-400 mb-1">{new Date(img.created).toLocaleString('hu-HU')}</div>
+            {img.meta?.style && <div className="text-[11px] text-gray-300 mb-1">Stílus: {img.meta.style}</div>}
+            {typeof img.meta?.styleIntensity === 'number' && <div className="text-[11px] text-gray-400 mb-1">Intenzitás: {img.meta.styleIntensity}</div>}
+            {img.meta?.camera && <div className="text-[11px] text-gray-500 mb-1">Kamera: {img.meta.camera}</div>}
+            {img.meta?.aspectRatio && <div className="text-[11px] text-gray-500 mb-1">Képarány: {img.meta.aspectRatio}</div>}
+            {img.meta?.locationProfileId && <div className="text-[11px] text-emerald-400/90 mb-1">Helyszínprofil: {img.meta.locationProfileId}</div>}
+            {img.meta?.shotTemplateId && <div className="text-[11px] text-emerald-300/80 mb-1">Beállítás: {img.meta.shotTemplateId}</div>}
+            {img.meta?.locationFingerprint && <div className="text-[11px] text-gray-500 mb-1">Ujjlenyomat: {img.meta.locationFingerprint}</div>}
+            {Array.isArray(img.meta?.characterIds) && img.meta!.characterIds!.length > 1 && <div className="text-[11px] text-gray-500 mb-1">Szereplők: {img.meta!.characterIds!.join(', ')}</div>}
             <div className="flex items-center gap-2 mt-1">
-              <a href={img.url} download className="text-blue-400 hover:underline text-xs">Download</a>
-              {onUseForAnimation && (
-                <button
-                  type="button"
-                  onClick={() => onUseForAnimation(img.url)}
-                  className="text-xs text-indigo-400 hover:text-indigo-300 border border-indigo-700 hover:border-indigo-500 px-2 py-0.5 rounded transition-colors"
-                >
-                  ▶ Animate
-                </button>
-              )}
+              <a href={img.url} download className="text-blue-400 hover:underline text-xs">Letöltés</a>
+              {onUseForAnimation && <button type="button" onClick={() => onUseForAnimation(img.url)} className="text-xs text-indigo-400 hover:text-indigo-300 border border-indigo-700 hover:border-indigo-500 px-2 py-0.5 rounded transition-colors">▶ Animálás</button>}
             </div>
           </div>
         ))}
       </div>
 
       <div className="flex items-center justify-between mt-4 text-xs text-gray-400">
-        <div>Showing {pageImages.length} of {images.length} images</div>
+        <div>{pageImages.length} / {images.length} kép megjelenítve</div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-            disabled={currentPage <= 1}
-            className="px-2 py-1 rounded border border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:border-gray-500"
-          >
-            Prev
-          </button>
-          <button
-            type="button"
-            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-            disabled={currentPage >= totalPages}
-            className="px-2 py-1 rounded border border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:border-gray-500"
-          >
-            Next
-          </button>
+          <button type="button" onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))} disabled={currentPage <= 1} className="px-2 py-1 rounded border border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:border-gray-500">Előző</button>
+          <button type="button" onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))} disabled={currentPage >= totalPages} className="px-2 py-1 rounded border border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:border-gray-500">Következő</button>
         </div>
       </div>
 
       {selectedImage && (
-        <div
-          className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4"
-          onClick={() => setSelectedIndex(null)}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Image preview, use left and right arrow keys to navigate"
-        >
-          <div
-            className="relative max-w-6xl w-full flex flex-col items-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              onClick={() => setSelectedIndex(null)}
-              className="absolute -top-10 right-0 text-white text-sm bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded"
-            >
-              Close
-            </button>
-            <img
-              src={selectedImage.url}
-              alt={selectedImage.filename}
-              className="max-h-[85vh] max-w-full object-contain rounded shadow-2xl"
-            />
-            <div className="text-gray-300 text-xs mt-2">
-              {new Date(selectedImage.created).toLocaleString()}
-            </div>
-            {selectedImage.meta?.style && (
-              <div className="text-gray-300 text-xs mt-1">Style: {selectedImage.meta.style}</div>
-            )}
-            {typeof selectedImage.meta?.styleIntensity === 'number' && (
-              <div className="text-gray-400 text-xs mt-1">Intensity: {selectedImage.meta.styleIntensity}</div>
-            )}
-            {selectedImage.meta?.camera && (
-              <div className="text-gray-500 text-xs mt-1">Camera: {selectedImage.meta.camera}</div>
-            )}
-            {selectedImage.meta?.aspectRatio && (
-              <div className="text-gray-500 text-xs mt-1">Aspect Ratio: {selectedImage.meta.aspectRatio}</div>
-            )}
-            {selectedImage.meta?.locationProfileId && (
-              <div className="text-emerald-400 text-xs mt-1">Location Profile: {selectedImage.meta.locationProfileId}</div>
-            )}
-            {selectedImage.meta?.shotTemplateId && (
-              <div className="text-emerald-300 text-xs mt-1">Shot Template: {selectedImage.meta.shotTemplateId}</div>
-            )}
-            {selectedImage.meta?.locationFingerprint && (
-              <div className="text-gray-500 text-xs mt-1">Location Fingerprint: {selectedImage.meta.locationFingerprint}</div>
-            )}
-            {selectedImage.meta?.continuityNotes && (
-              <div className="text-gray-400 text-xs mt-1 max-w-2xl text-center">Continuity Notes: {selectedImage.meta.continuityNotes}</div>
-            )}
-            {Array.isArray(selectedImage.meta?.characterIds) && selectedImage.meta!.characterIds!.length > 1 && (
-              <div className="text-gray-500 text-xs mt-1">Cast: {selectedImage.meta!.characterIds!.join(', ')}</div>
-            )}
+        <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4" onClick={() => setSelectedIndex(null)} role="dialog" aria-modal="true" aria-label="Kép előnézete, a bal és jobb nyíllal lehet lépkedni">
+          <div className="relative max-w-6xl w-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+            <button type="button" onClick={() => setSelectedIndex(null)} className="absolute -top-10 right-0 text-white text-sm bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded">Bezárás</button>
+            <img src={selectedImage.url} alt={selectedImage.filename} className="max-h-[85vh] max-w-full object-contain rounded shadow-2xl" />
+            <div className="text-gray-300 text-xs mt-2">{new Date(selectedImage.created).toLocaleString('hu-HU')}</div>
+            {selectedImage.meta?.style && <div className="text-gray-300 text-xs mt-1">Stílus: {selectedImage.meta.style}</div>}
+            {typeof selectedImage.meta?.styleIntensity === 'number' && <div className="text-gray-400 text-xs mt-1">Intenzitás: {selectedImage.meta.styleIntensity}</div>}
+            {selectedImage.meta?.camera && <div className="text-gray-500 text-xs mt-1">Kamera: {selectedImage.meta.camera}</div>}
+            {selectedImage.meta?.aspectRatio && <div className="text-gray-500 text-xs mt-1">Képarány: {selectedImage.meta.aspectRatio}</div>}
+            {selectedImage.meta?.locationProfileId && <div className="text-emerald-400 text-xs mt-1">Helyszínprofil: {selectedImage.meta.locationProfileId}</div>}
+            {selectedImage.meta?.shotTemplateId && <div className="text-emerald-300 text-xs mt-1">Beállítássablon: {selectedImage.meta.shotTemplateId}</div>}
+            {selectedImage.meta?.locationFingerprint && <div className="text-gray-500 text-xs mt-1">Ujjlenyomat: {selectedImage.meta.locationFingerprint}</div>}
+            {selectedImage.meta?.continuityNotes && <div className="text-gray-400 text-xs mt-1 max-w-2xl text-center">Folytonossági jegyzetek: {selectedImage.meta.continuityNotes}</div>}
+            {Array.isArray(selectedImage.meta?.characterIds) && selectedImage.meta!.characterIds!.length > 1 && <div className="text-gray-500 text-xs mt-1">Szereplők: {selectedImage.meta!.characterIds!.join(', ')}</div>}
           </div>
         </div>
       )}
