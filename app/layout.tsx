@@ -1,8 +1,14 @@
 import './globals.css';
 import { ReactNode } from 'react';
-import { Montserrat } from 'next/font/google';
+import { Inter, Montserrat } from 'next/font/google';
 import TopNav from './components/TopNav';
 import HungarianUi from './components/HungarianUi';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
 
 const montserrat = Montserrat({
   subsets: ['latin'],
@@ -20,7 +26,7 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="hu">
-      <body className={`${montserrat.variable} min-h-screen bg-black text-gray-100`}>
+      <body className={`${inter.variable} ${montserrat.variable} min-h-screen bg-black text-gray-100`}>
         <TopNav />
         <HungarianUi />
         {children}
