@@ -88,10 +88,9 @@ const TEXT_MAP: Record<string, string> = {
   '10 seconds': '10 másodperc',
   '12 seconds': '12 másodperc',
   '15 seconds': '15 másodperc',
-  'Failed': 'Sikertelen',
-  'Canceled': 'Megszakítva',
+  Failed: 'Sikertelen',
+  Canceled: 'Megszakítva',
   'No animation jobs yet. Select an image above and submit.': 'Még nincs animációs feladat. Válassz egy képet fent, majd indítsd el.',
-  'Selected': 'Kiválasztva',
   'Részletes helyszínleírás HU/EN.': 'Részletes helyszínleírás magyarul vagy angolul.',
   'Establishing Wide': 'Totál beállítás',
   'Medium Dialogue': 'Középtotál párbeszédhez',
@@ -136,6 +135,10 @@ const TEXT_MAP: Record<string, string> = {
   'McDonalds East Europe (Late 90s / 2000)': 'McDonald’s Kelet-Európa (90-es évek vége / 2000)',
   'Old Land Rover Interior (POV)': 'Régi Land Rover belseje (POV)',
   'White Studio / Large Sofa': 'Fehér stúdió / nagy kanapé',
+  'Failed to load characters': 'Nem sikerült betölteni a karaktereket.',
+  'Generation failed': 'A generálás sikertelen.',
+  'Loaded last settings for this character.': 'A karakter legutóbbi beállításai betöltve.',
+  'Auto-saved current form.': 'Az aktuális űrlap automatikusan mentve.',
 };
 
 function translateTextNode(node: Text) {
@@ -162,6 +165,31 @@ function translateTextNode(node: Text) {
   const seconds = trimmed.match(/^(\d+) seconds$/);
   if (seconds) {
     node.nodeValue = `${seconds[1]} másodperc`;
+    return;
+  }
+  const saved = trimmed.match(/^Saved (character|global) preset: (.+)$/);
+  if (saved) {
+    node.nodeValue = `${saved[1] === 'character' ? 'Karakter' : 'Globális'} preset mentve: ${saved[2]}`;
+    return;
+  }
+  const updated = trimmed.match(/^Updated (character|global) preset\.$/);
+  if (updated) {
+    node.nodeValue = `${updated[1] === 'character' ? 'Karakter' : 'Globális'} preset frissítve.`;
+    return;
+  }
+  const loaded = trimmed.match(/^Loaded (character|global) preset: (.+)$/);
+  if (loaded) {
+    node.nodeValue = `${loaded[1] === 'character' ? 'Karakter' : 'Globális'} preset betöltve: ${loaded[2]}`;
+    return;
+  }
+  const loadedDefault = trimmed.match(/^Loaded global default preset: (.+)$/);
+  if (loadedDefault) {
+    node.nodeValue = `Globális alapértelmezett preset betöltve: ${loadedDefault[1]}`;
+    return;
+  }
+  const deleted = trimmed.match(/^Deleted (character|global) preset\.$/);
+  if (deleted) {
+    node.nodeValue = `${deleted[1] === 'character' ? 'Karakter' : 'Globális'} preset törölve.`;
     return;
   }
   const statusMap: Record<string, string> = {
