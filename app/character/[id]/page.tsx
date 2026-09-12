@@ -415,26 +415,31 @@ export default function CharacterDetailPage() {
   if (!character) return <main className="min-h-screen bg-black text-gray-100 font-mono flex items-center justify-center">Loading...</main>;
 
   return (
-    <main className="min-h-screen bg-black text-gray-100 font-mono flex flex-col items-center p-4 md:p-8">
-      <div className="w-full max-w-3xl">
-        <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 mb-4 flex gap-4 items-start">
-          <div className="flex gap-2 shrink-0">{(character.imagePaths || []).slice(0, 2).map((img: string, i: number) => <img key={i} src={img} alt="ref" className="w-16 h-16 object-cover rounded" />)}</div>
+    <main className="min-h-screen bg-black text-gray-100 font-mono flex flex-col items-center mt-6">
+      <div className="w-full max-w-6xl px-4">
+        <div className="flex justify-between items-center mb-8 gap-4">
+          <h1 className="text-3xl font-bold tracking-tight">Új jelenet</h1>
+        </div>
+        <div className="bg-zinc-950 rounded-lg border border-gray-800 p-4 mb-4 flex gap-4 items-start">
+          <div className="flex gap-2 shrink-0">{(character.imagePaths || []).slice(0, 1).map((img: string, i: number) => <img key={i} src={img} alt="ref" className="w-24 h-24 object-cover rounded" />)}</div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-3"><div className="font-bold text-xl">{character.name}</div><Link href="/presets" className="text-xs px-2 py-1 rounded border border-gray-700 hover:border-indigo-500 text-gray-300">Preset Manager</Link></div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="font-bold text-xl">{character.name}</div>
+            </div>
             <div className="text-gray-400 text-sm mb-1 line-clamp-2">{character.description}</div>
             <div className="text-xs text-gray-500">{character.traits.join(', ')}</div>
           </div>
         </div>
 
-        <div className="flex gap-1 mb-4 bg-gray-900 rounded-lg border border-gray-800 p-1">
-          {(['generate', 'animate', 'gallery'] as Tab[]).map((tab) => <button key={tab} type="button" onClick={() => setActiveTab(tab)} className={`flex-1 py-2 rounded text-sm font-semibold ${activeTab === tab ? 'bg-gray-700 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}>{tab === 'generate' ? '✨ ' : tab === 'animate' ? '▶ ' : '🖼 '}{tab.charAt(0).toUpperCase() + tab.slice(1)}</button>)}
+        <div className="flex gap-1 mb-4 bg-zinc-950 rounded-lg border border-gray-800 p-1">
+          {(['generate', 'animate', 'gallery'] as Tab[]).map((tab) => <button key={tab} type="button" onClick={() => setActiveTab(tab)} className={`flex-1 py-2 rounded text-sm font-semibold ${activeTab === tab ? 'bg-zinc-800 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-zinc-800'}`}>{tab === 'generate' ? '✨ ' : tab === 'animate' ? '▶ ' : '🖼 '}{tab.charAt(0).toUpperCase() + tab.slice(1)}</button>)}
         </div>
 
-        <div className="bg-gray-900 rounded-lg border border-gray-800 p-5 md:p-8">
+        <div className="bg-zinc-950 rounded-lg">
           {activeTab === 'generate' && (
             <>
               <form onSubmit={handleGenerate} className="mb-8 space-y-3">
-                <div className="rounded border border-gray-700 bg-gray-800/40 p-3 space-y-2">
+                <div className="rounded border border-gray-700 bg-zinc-950 p-6 space-y-2">
                   <div className="flex items-center justify-between"><div className="text-xs uppercase tracking-wide text-gray-400">Generate Presets and Auto-Restore</div><Link href="/presets" className="text-xs text-indigo-400 hover:text-indigo-300">Manage Location / Camera / Style</Link></div>
                   <input className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={presetName} onChange={(e) => setPresetName(e.target.value)} placeholder="Preset name" />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -447,7 +452,7 @@ export default function CharacterDetailPage() {
                 <div><label className="block mb-1 text-sm font-semibold text-gray-300">Location Preset <span className="text-gray-600">({locationPresetCount})</span></label><select className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={locationPreset} onChange={(e) => setLocationPreset(e.target.value)}>{locationPresetOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>
                 <div><label className="block mb-1 text-sm font-semibold text-gray-300">Location</label><textarea className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={location} onChange={(e) => setLocation(e.target.value)} rows={4} placeholder="Részletes helyszínleírás HU/EN." /></div>
 
-                <div className="rounded border border-gray-700 bg-gray-800/40 p-3 space-y-3">
+                <div className="rounded border border-gray-700 bg-zincy-850 p-6 space-y-3">
                   <div className="text-xs uppercase tracking-wide text-gray-400">Location Profile Continuity</div>
                   {[['Spatial geometry and layout', locationGeometry, setLocationGeometry], ['Lighting and time of day', locationLighting, setLocationLighting], ['Palette and textures', locationPalette, setLocationPalette], ['Fixed props and positions', locationProps, setLocationProps], ['Camera continuity rules', locationCameraContinuity, setLocationCameraContinuity]].map(([label, value, setter]) => <div key={String(label)}><label className="block mb-1 text-sm font-semibold text-gray-300">{label}</label><textarea className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={String(value)} onChange={(e) => (setter as (value: string) => void)(e.target.value)} rows={2} /></div>)}
                   <div><label className="block mb-1 text-sm font-semibold text-gray-300">Shot Template</label><select className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={shotTemplate} onChange={(e) => setShotTemplate(e.target.value as ShotTemplate)}>{SHOT_TEMPLATE_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>
@@ -457,7 +462,7 @@ export default function CharacterDetailPage() {
 
                 <div><label className="block mb-1 text-sm font-semibold text-gray-300">Mood</label><input className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={mood} onChange={(e) => setMood(e.target.value)} list="mood-history" /><datalist id="mood-history">{moodHistory.map((item) => <option key={item} value={item} />)}</datalist></div>
 
-                <div className="rounded border border-gray-700 bg-gray-800/50 p-3 space-y-3"><div><label className="block mb-1 text-sm font-semibold text-gray-300">Cast</label><div className="flex gap-2"><select className="flex-1 p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={pendingCharacterId} onChange={(e) => setPendingCharacterId(e.target.value)}><option value="">Select character...</option>{availableCharacters.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><button type="button" onClick={addExtraCharacter} className="px-3 py-2 rounded bg-indigo-800 text-sm font-semibold">Add</button></div></div><div className="space-y-2">{selectedCharacters.map((item) => <div key={item.id} className="flex items-center gap-2"><div className="w-40 text-xs text-gray-300 truncate">{item.name}</div><input className="w-28 p-1.5 rounded bg-gray-800 border border-gray-700 text-xs" value={aliasMap[item.id] || ''} onChange={(e) => setAliasMap((prev) => ({ ...prev, [item.id]: e.target.value }))} placeholder="Alias" maxLength={12} />{item.id !== primaryCharacterId && <button type="button" onClick={() => removeExtraCharacter(item.id)} className="text-xs px-2 py-1 rounded border border-gray-600">Remove</button>}</div>)}</div><div><label className="block mb-1 text-sm font-semibold text-gray-300">Shared action prompt</label><textarea className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={actionPrompt} onChange={(e) => setActionPrompt(e.target.value)} rows={2} /></div></div>
+                <div className="rounded border border-gray-700 bg-gray-800/50 p-3 space-y-3"><div><label className="block mb-1 text-sm font-semibold text-gray-300">Szereposztás</label><div className="flex gap-2"><select className="flex-1 p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={pendingCharacterId} onChange={(e) => setPendingCharacterId(e.target.value)}><option value="">Válassz karaktert</option>{availableCharacters.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><button type="button" onClick={addExtraCharacter} className="px-3 py-2 rounded bg-indigo-800 text-sm font-semibold">Add</button></div></div><div className="space-y-2">{selectedCharacters.map((item) => <div key={item.id} className="flex items-center gap-2"><div className="w-40 text-xs text-gray-300 truncate">{item.name}</div><input className="w-28 p-1.5 rounded bg-gray-800 border border-gray-700 text-xs" value={aliasMap[item.id] || ''} onChange={(e) => setAliasMap((prev) => ({ ...prev, [item.id]: e.target.value }))} placeholder="Alias" maxLength={12} />{item.id !== primaryCharacterId && <button type="button" onClick={() => removeExtraCharacter(item.id)} className="text-xs px-2 py-1 rounded border border-gray-600">Remove</button>}</div>)}</div><div><label className="block mb-1 text-sm font-semibold text-gray-300">Shared action prompt</label><textarea className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={actionPrompt} onChange={(e) => setActionPrompt(e.target.value)} rows={2} /></div></div>
 
                 <div><label className="block mb-1 text-sm font-semibold text-gray-300">Camera</label><select className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={camera} onChange={(e) => setCamera(e.target.value)}>{cameraOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>
                 <div><label className="block mb-1 text-sm font-semibold text-gray-300">Képarány</label><select className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value as AspectRatio16x9)}>{ASPECT_RATIO_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>

@@ -13,8 +13,8 @@ export default function TopNav() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-gray-800 bg-black/95 backdrop-blur">
-      <div className="mx-auto flex min-h-16 w-full max-w-7xl items-center justify-between gap-6 px-4 py-3 md:px-8">
+    <header className="sticky top-0 z-40 w-full max-w-6xl mx-auto border-b border-gray-800 bg-black/95 backdrop-blur">
+      <div className="mx-auto flex min-h-16 w-full max-w-6xl items-center justify-between gap-6 px-4 py-3">
         <Link
           href="/"
           className="shrink-0 font-sans text-sm font-bold italic tracking-tight text-white md:text-base"
