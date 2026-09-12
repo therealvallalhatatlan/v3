@@ -1,84 +1,86 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CAMERA_PRESETS } from '../../../lib/camera';
-import { LOCATION_PRESET_MAP } from '../../../lib/sceneMapper';
-import { STYLE_PRESETS } from '../../../lib/style';
 import {
+  PresetRecord,
+  PresetType,
   addCustomPreset,
-  CustomPreset,
   deleteCustomPreset,
-  getCustomPresets,
-  updateCustomPreset,
+  duplicatePreset,
+  getAllPresets,
+  resetBuiltinPreset,
+  updatePreset,
 } from '../../../lib/presetStore';
 
-export const dynamic = 'force-dynamic';
-
 type PresetOption = {
+  id: string;
   value: string;
   label: string;
   prompt: string;
   negative?: string;
-  builtin?: boolean;
-  id?: string;
+  builtin: boolean;
+  updatedAt: number;
 };
 
-function titleFromKey(key: string): string {
-  if (!key) return 'Empty preset';
-  return key.split('-').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
-}
-
-function customToOption(preset: CustomPreset): PresetOption {
-  return { value: preset.key, label: preset.label, prompt: preset.prompt, negative: preset.negative, builtin: false, id: preset.id };
-}
-
-function builtins(): { location: PresetOption[]; camera: PresetOption[]; style: PresetOption[] } {
+function toOption(preset: PresetRecord): PresetOption {
   return {
-    location: Object.entries(LOCATION_PRESET_MAP).map(([value, prompt]) => ({ value, label: value === '' ? 'Üres preset' : titleFromKey(value), prompt, builtin: true })),
-    camera: Object.entries(CAMERA_PRESETS).map(([value, prompt]) => ({ value, label: value === 'closeup' ? 'Close-up' : titleFromKey(value), prompt, builtin: true })),
-    style: Object.entries(STYLE_PRESETS).map(([value, prompt]) => ({ value, label: value === 'gritty' ? 'Gritty Underground (Default)' : titleFromKey(value), prompt, builtin: true })),
+    id: preset.id,
+    value: preset.key,
+    label: preset.label,
+    prompt: preset.prompt,
+    negative: preset.negative,
+    builtin: preset.builtin,
+    updatedAt: preset.updatedAt,
   };
 }
 
-function keyIsValid(key: string): boolean {
-  return /^[a-z0-9][a-z0-9-]{1,63}$/.test(key);
+function isType(value: unknown): value is PresetType {
+  return value === 'location' || value === 'camera' || value === 'style';
 }
 
-function normalizeBody(body: any) {
-  const type = String(body?.type || '').trim();
-  const key = String(body?.key || '').trim().toLowerCase();
-  const label = String(body?.label || '').trim();
-  const prompt = String(body?.prompt || '').trim();
-  const negative = String(body?.negative || '').trim();
-  if (!['location', 'camera', 'style'].includes(type)) throw new Error('type must be location, camera or style');
-  if (!keyIsValid(key)) throw new Error('key must be 2-64 chars: lowercase letters, numbers and hyphens');
-  if (!label || label.length > 120) throw new Error('label is required and must be <= 120 characters');
-  if (!prompt || prompt.length > 6000) throw new Error('prompt is required and must be <= 6000 characters');
-  if (negative.length > 3000) throw new Error('negative must be <= 3000 characters');
-  return { type: type as 'location' | 'camera' | 'style', key, label, prompt, negative: negative || undefined };
+function validKey(key: string, type: PresetType): boolean {
+  return type === 'location' && key === '' || /^[a-z0-9][a-z0-9-]{1,63}$/.test(key);
 }
 
-function keyTaken(type: CustomPreset['type'], key: string, exceptId?: string): boolean {
-  if (builtins()[type].some((preset) => preset.value === key)) return true;
-  return getCustomPresets().some((preset) => preset.type === type && preset.key === key && preset.id !== exceptId);
+function keyTaken(type: PresetType, key: string, exceptId?: string): boolean {
+  return getAllPresets().some((preset) => preset.type === type && preset.key === key && preset.id !== exceptId);
+}
+
+function validateText(label: string, prompt: string, negative: string): string | null {
+  if (!label || label.length > 120) return 'label is required and must be <= 120 characters';
+  if (prompt.length > 6000) return 'prompt must be <= 6000 characters';
+  if (negative.length > 3000) return 'negative prompt must be <= 3000 characters';
+  return null;
 }
 
 export async function GET() {
-  const defaults = builtins();
-  const custom = getCustomPresets();
+  const all = getAllPresets();
   return NextResponse.json({
     presets: {
-      location: [...defaults.location, ...custom.filter((p) => p.type === 'location').map(customToOption)],
-      camera: [...defaults.camera, ...custom.filter((p) => p.type === 'camera').map(customToOption)],
-      style: [...defaults.style, ...custom.filter((p) => p.type === 'style').map(customToOption)],
+      location: all.filter((preset) => preset.type === 'location').map(toOption),
+      camera: all.filter((preset) => preset.type === 'camera').map(toOption),
+      style: all.filter((preset) => preset.type === 'style').map(toOption),
     },
-    custom,
+    all,
   });
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const normalized = normalizeBody(await req.json());
-    if (keyTaken(normalized.type, normalized.key)) return NextResponse.json({ error: 'A preset with this key already exists.' }, { status: 409 });
-    return NextResponse.json({ preset: addCustomPreset(normalized) }, { status: 201 });
+    const body = await req.json();
+    if (!isType(body?.type)) return NextResponse.json({ error: 'type must be location, camera or style' }, { status: 400 });
+
+    const type = body.type as PresetType;
+    const key = String(body?.key ?? '').trim().toLowerCase();
+    const label = String(body?.label ?? '').trim();
+    const prompt = String(body?.prompt ?? '').trim();
+    const negative = String(body?.negative ?? '').trim();
+
+    if (!validKey(key, type)) return NextResponse.json({ error: 'key must be 2-64 chars: lowercase letters, numbers and hyphens' }, { status: 400 });
+    const textError = validateText(label, prompt, negative);
+    if (textError) return NextResponse.json({ error: textError }, { status: 400 });
+    if (keyTaken(type, key)) return NextResponse.json({ error: 'A preset with this key already exists.' }, { status: 409 });
+
+    const preset = addCustomPreset({ type, key, label, prompt, negative: negative || undefined });
+    return NextResponse.json({ preset }, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Failed to create preset' }, { status: 400 });
   }
@@ -88,21 +90,36 @@ export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
     const id = String(body?.id || '').trim();
-    const current = getCustomPresets().find((preset) => preset.id === id);
-    if (!current) return NextResponse.json({ error: 'Custom preset not found' }, { status: 404 });
-    const candidate = {
-      key: body?.key === undefined ? current.key : String(body.key).trim().toLowerCase(),
-      label: body?.label === undefined ? current.label : String(body.label).trim(),
-      prompt: body?.prompt === undefined ? current.prompt : String(body.prompt).trim(),
-      negative: body?.negative === undefined ? current.negative : String(body.negative || '').trim() || undefined,
-    };
-    if (!keyIsValid(candidate.key)) return NextResponse.json({ error: 'Invalid key' }, { status: 400 });
-    if (!candidate.label || candidate.label.length > 120) return NextResponse.json({ error: 'Invalid label' }, { status: 400 });
-    if (!candidate.prompt || candidate.prompt.length > 6000) return NextResponse.json({ error: 'Invalid prompt' }, { status: 400 });
-    if (candidate.negative && candidate.negative.length > 3000) return NextResponse.json({ error: 'Invalid negative prompt' }, { status: 400 });
-    if (keyTaken(current.type, candidate.key, id)) return NextResponse.json({ error: 'A preset with this key already exists.' }, { status: 409 });
-    const updated = updateCustomPreset(id, candidate);
-    return NextResponse.json({ preset: updated });
+    const action = String(body?.action || 'update');
+    if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
+
+    if (action === 'reset') {
+      const preset = resetBuiltinPreset(id);
+      if (!preset) return NextResponse.json({ error: 'Built-in preset not found' }, { status: 404 });
+      return NextResponse.json({ preset });
+    }
+
+    if (action === 'duplicate') {
+      const preset = duplicatePreset(id);
+      if (!preset) return NextResponse.json({ error: 'Preset not found' }, { status: 404 });
+      return NextResponse.json({ preset }, { status: 201 });
+    }
+
+    const current = getAllPresets().find((preset) => preset.id === id);
+    if (!current) return NextResponse.json({ error: 'Preset not found' }, { status: 404 });
+
+    const label = String(body?.label ?? current.label).trim();
+    const prompt = String(body?.prompt ?? current.prompt).trim();
+    const negative = String(body?.negative ?? current.negative ?? '').trim();
+    const key = current.builtin ? current.key : String(body?.key ?? current.key).trim().toLowerCase();
+
+    if (!validKey(key, current.type)) return NextResponse.json({ error: 'Invalid key' }, { status: 400 });
+    const textError = validateText(label, prompt, negative);
+    if (textError) return NextResponse.json({ error: textError }, { status: 400 });
+    if (keyTaken(current.type, key, id)) return NextResponse.json({ error: 'A preset with this key already exists.' }, { status: 409 });
+
+    const preset = updatePreset(id, { key, label, prompt, negative: negative || undefined });
+    return NextResponse.json({ preset });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Failed to update preset' }, { status: 400 });
   }
@@ -111,6 +128,7 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const id = new URL(req.url).searchParams.get('id') || '';
   if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
-  if (!deleteCustomPreset(id)) return NextResponse.json({ error: 'Custom preset not found' }, { status: 404 });
+  const removed = deleteCustomPreset(id);
+  if (!removed) return NextResponse.json({ error: 'Built-in presets cannot be deleted. Use Reset instead.' }, { status: 409 });
   return NextResponse.json({ ok: true });
 }
