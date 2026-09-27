@@ -3,6 +3,7 @@ import { ReactNode } from 'react';
 import { Inter, Montserrat } from 'next/font/google';
 import TopNav from './components/TopNav';
 import HungarianUi from './components/HungarianUi';
+import { Analytics } from "@vercel/analytics/next"
 
 const inter = Inter({
   subsets: ['latin'],
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <TopNav />
         <HungarianUi />
         {children}
+        <Analytics/>
       </body>
     </html>
   );
