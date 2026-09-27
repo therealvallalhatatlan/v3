@@ -15,7 +15,7 @@ export const metadata = {
     url: 'https://engine.vallalhatatlan.online/',
     images: [
       {
-        url: '/api/og?variant=landing&character=character.png&v=9',
+        url: '/api/og?variant=landing&character=malac.jpg&v=10',
         width: 1200,
         height: 630,
         type: 'image/png',
@@ -27,7 +27,7 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'VÁLLALHATATLAN // VALÓSÁG MOTOR',
     description: 'Bedobod a karaktered. Adsz neki egy helyet, egy kamerát és egy stílust. Aztán generálunk egy valóságot, amit utólag nehéz megmagyarázni.',
-    images: ['/api/og?variant=landing&character=character.png&v=9'],
+    images: ['/api/og?variant=landing&character=malac.jpg&v=10'],
   },
 };
 
