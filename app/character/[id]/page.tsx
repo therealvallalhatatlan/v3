@@ -446,50 +446,250 @@ export default function CharacterDetailPage() {
         <div className="bg-zinc-950 rounded-lg">
           {activeTab === 'generate' && (
             <>
-              <form onSubmit={handleGenerate} className="mb-8 space-y-3">
-                <div className="rounded border border-gray-700 bg-zinc-950 p-6 space-y-2">
-                  <div className="flex items-center justify-between"><div className="text-xs uppercase tracking-wide text-gray-400">Generate Presets and Auto-Restore</div><Link href="/presets" className="text-xs text-indigo-400 hover:text-indigo-300">Manage Location / Camera / Style</Link></div>
-                  <input className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={presetName} onChange={(e) => setPresetName(e.target.value)} placeholder="Preset name" />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    <div className="space-y-2"><label className="block text-xs font-semibold text-gray-300">Character presets</label><select className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={selectedCharacterPresetId} onChange={(e) => setSelectedCharacterPresetId(e.target.value)}><option value="">Select...</option>{characterPresets.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select><div className="flex flex-wrap gap-2"><button type="button" className="px-2 py-1 rounded bg-indigo-800 text-xs" onClick={() => saveNewPreset('character')}>Save New</button><button type="button" className="px-2 py-1 rounded bg-gray-700 text-xs" disabled={!selectedCharacterPresetId} onClick={() => overwritePreset('character', selectedCharacterPresetId)}>Overwrite</button><button type="button" className="px-2 py-1 rounded bg-gray-700 text-xs" disabled={!selectedCharacterPresetId} onClick={() => loadPresetById('character', selectedCharacterPresetId)}>Load</button><button type="button" className="px-2 py-1 rounded border border-gray-600 text-xs" disabled={!selectedCharacterPresetId} onClick={() => deletePresetById('character', selectedCharacterPresetId)}>Delete</button></div></div>
-                    <div className="space-y-2"><label className="block text-xs font-semibold text-gray-300">Global presets</label><select className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={selectedGlobalPresetId} onChange={(e) => setSelectedGlobalPresetId(e.target.value)}><option value="">Select...</option>{globalPresets.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select><div className="flex flex-wrap gap-2"><button type="button" className="px-2 py-1 rounded bg-indigo-800 text-xs" onClick={() => saveNewPreset('global')}>Save New</button><button type="button" className="px-2 py-1 rounded bg-gray-700 text-xs" disabled={!selectedGlobalPresetId} onClick={() => overwritePreset('global', selectedGlobalPresetId)}>Overwrite</button><button type="button" className="px-2 py-1 rounded bg-gray-700 text-xs" disabled={!selectedGlobalPresetId} onClick={() => loadPresetById('global', selectedGlobalPresetId)}>Load</button><button type="button" className="px-2 py-1 rounded border border-gray-600 text-xs" disabled={!selectedGlobalPresetId} onClick={() => deletePresetById('global', selectedGlobalPresetId)}>Delete</button><button type="button" className="px-2 py-1 rounded border border-indigo-700 text-xs" disabled={!selectedGlobalPresetId} onClick={() => { localStorage.setItem(GLOBAL_DEFAULT_PRESET_KEY, selectedGlobalPresetId); setStorageInfo('Saved selected global preset as default.'); }}>Set as default</button></div></div>
+              {!isPaid && (
+                <div className="mb-4 rounded-lg border border-gray-800 bg-zinc-950 p-4 text-xs text-zinc-500">
+                  FREE mód · 6 ingyenes kredit · alap generátor
+                </div>
+              )}
+
+              <form onSubmit={handleGenerate} className="mb-8 space-y-4">
+                <div>
+                  <label className="block mb-1 text-sm font-semibold text-gray-300">Helyszín</label>
+                  <textarea
+                    className="w-full p-3 rounded bg-gray-900 border border-gray-700 text-sm"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    rows={3}
+                    placeholder="Hol történjen a jelenet?"
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-sm font-semibold text-gray-300">Hangulat</label>
+                  <input
+                    className="w-full p-3 rounded bg-gray-900 border border-gray-700 text-sm"
+                    value={mood}
+                    onChange={(e) => setMood(e.target.value)}
+                    list="mood-history"
+                    placeholder="Pl. feszült, nyugodt, kaotikus…"
+                  />
+                  <datalist id="mood-history">{moodHistory.map((item) => <option key={item} value={item} />)}</datalist>
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-sm font-semibold text-gray-300">Mi történjen?</label>
+                  <textarea
+                    className="w-full p-3 rounded bg-gray-900 border border-gray-700 text-sm"
+                    value={actionPrompt}
+                    onChange={(e) => setActionPrompt(e.target.value)}
+                    rows={4}
+                    placeholder="Írd le, mit csináljon a karakter."
+                  />
+                </div>
+
+                <div className="rounded-lg border border-gray-800 bg-zinc-950 p-4">
+                  <div className="text-sm font-semibold text-gray-300 mb-3">Szereplők</div>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {selectedCharacters.map((item) => (
+                      <span key={item.id} className="rounded-full border border-gray-700 px-3 py-1 text-xs text-gray-300">
+                        {item.name}
+                      </span>
+                    ))}
                   </div>
-                  {storageInfo && <div className="text-xs text-gray-400">{storageInfo}</div>}
-                </div>}
+                  <div className="flex gap-2">
+                    <select
+                      className="flex-1 p-2 rounded bg-gray-900 border border-gray-700 text-sm"
+                      value={pendingCharacterId}
+                      onChange={(e) => setPendingCharacterId(e.target.value)}
+                    >
+                      <option value="">+ Második karakter</option>
+                      {availableCharacters.map((item) => (
+                        <option key={item.id} value={item.id}>{item.name}</option>
+                      ))}
+                    </select>
+                    <button type="button" onClick={addExtraCharacter} className="px-3 py-2 rounded bg-gray-800 border border-gray-700 text-sm">
+                      Hozzáadás
+                    </button>
+                  </div>
+                  {isPaid && selectedCharacters.length > 1 && (
+                    <div className="mt-3 space-y-2">
+                      {selectedCharacters.map((item) => (
+                        <div key={item.id} className="flex items-center gap-2">
+                          <div className="w-40 text-xs text-gray-400 truncate">{item.name}</div>
+                          <input
+                            className="w-28 p-1.5 rounded bg-gray-900 border border-gray-700 text-xs"
+                            value={aliasMap[item.id] || ''}
+                            onChange={(e) => setAliasMap((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                            placeholder="Alias"
+                            maxLength={12}
+                          />
+                          {item.id !== primaryCharacterId && (
+                            <button type="button" onClick={() => removeExtraCharacter(item.id)} className="text-xs px-2 py-1 rounded border border-gray-700">
+                              Törlés
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-                {isPaid && <div><label className="block mb-1 text-sm font-semibold text-gray-300">Location Preset <span className="text-gray-600">({locationPresetCount})</span></label><select className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={locationPreset} onChange={(e) => setLocationPreset(e.target.value)}>{locationPresetOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>
-                </div>}
-                <div><label className="block mb-1 text-sm font-semibold text-gray-300">Location</label><textarea className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={location} onChange={(e) => setLocation(e.target.value)} rows={4} placeholder="Részletes helyszínleírás HU/EN." /></div>
+                <div>
+                  <label className="block mb-1 text-sm font-semibold text-gray-300">Képarány</label>
+                  <select
+                    className="w-full p-3 rounded bg-gray-900 border border-gray-700 text-sm"
+                    value={aspectRatio}
+                    onChange={(e) => setAspectRatio(e.target.value as AspectRatio16x9)}
+                  >
+                    {ASPECT_RATIO_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                  </select>
+                </div>
 
-                {isPaid && <div className="rounded border border-gray-700 bg-zinc-850 p-6 space-y-3">
-                  <div className="text-xs uppercase tracking-wide text-gray-400">Location Profile Continuity</div>
-                  {[['Spatial geometry and layout', locationGeometry, setLocationGeometry], ['Lighting and time of day', locationLighting, setLocationLighting], ['Palette and textures', locationPalette, setLocationPalette], ['Fixed props and positions', locationProps, setLocationProps], ['Camera continuity rules', locationCameraContinuity, setLocationCameraContinuity]].map(([label, value, setter]) => <div key={String(label)}><label className="block mb-1 text-sm font-semibold text-gray-300">{label}</label><textarea className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={String(value)} onChange={(e) => (setter as (value: string) => void)(e.target.value)} rows={2} /></div>)}
-                  <div><label className="block mb-1 text-sm font-semibold text-gray-300">Shot Template</label><select className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={shotTemplate} onChange={(e) => setShotTemplate(e.target.value as ShotTemplate)}>{SHOT_TEMPLATE_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-300"><label className="flex items-center gap-2"><input type="checkbox" checked={lockGeometry} onChange={(e) => setLockGeometry(e.target.checked)} />Lock geometry</label><label className="flex items-center gap-2"><input type="checkbox" checked={lockLighting} onChange={(e) => setLockLighting(e.target.checked)} />Lock lighting</label><label className="flex items-center gap-2"><input type="checkbox" checked={lockPalette} onChange={(e) => setLockPalette(e.target.checked)} />Lock palette</label><label className="flex items-center gap-2"><input type="checkbox" checked={lockProps} onChange={(e) => setLockProps(e.target.checked)} />Lock props</label><label className="flex items-center gap-2"><input type="checkbox" checked={lockCameraRules} onChange={(e) => setLockCameraRules(e.target.checked)} />Lock camera rules</label></div>
-                  <div><label className="block mb-1 text-sm font-semibold text-gray-300">Continuity notes</label><textarea className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={continuityNotes} onChange={(e) => setContinuityNotes(e.target.value)} rows={2} /></div>
-                </div>}
+                <div>
+                  <label className="block mb-1 text-sm font-semibold text-gray-300">Stílus</label>
+                  <select
+                    className="w-full p-3 rounded bg-gray-900 border border-gray-700 text-sm"
+                    value={style}
+                    onChange={(e) => setStyle(e.target.value)}
+                  >
+                    {styleOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                  </select>
+                </div>
 
-                <div><label className="block mb-1 text-sm font-semibold text-gray-300">Mood</label><input className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={mood} onChange={(e) => setMood(e.target.value)} list="mood-history" /><datalist id="mood-history">{moodHistory.map((item) => <option key={item} value={item} />)}</datalist></div>
+                {isPaid && (
+                  <>
+                    <details className="rounded-lg border border-gray-800 bg-zinc-950 p-4">
+                      <summary className="cursor-pointer text-sm font-semibold text-gray-300">Haladó generálás</summary>
+                      <div className="pt-4 space-y-4">
+                        <div>
+                          <label className="block mb-1 text-sm font-semibold text-gray-300">Generálási presetek</label>
+                          <select className="w-full p-2 rounded bg-gray-900 border border-gray-700 text-sm" value={selectedGlobalPresetId} onChange={(e) => setSelectedGlobalPresetId(e.target.value)}>
+                            <option value="">Nincs kiválasztva</option>
+                            {globalPresets.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            <button type="button" className="px-2 py-1 rounded bg-gray-800 text-xs" onClick={() => saveNewPreset('global')}>Mentés</button>
+                            <button type="button" className="px-2 py-1 rounded border border-gray-700 text-xs" disabled={!selectedGlobalPresetId} onClick={() => loadPresetById('global', selectedGlobalPresetId)}>Betöltés</button>
+                          </div>
+                        </div>
 
-                <div className="rounded border border-gray-700 bg-gray-800/50 p-3 space-y-3"><div><label className="block mb-1 text-sm font-semibold text-gray-300">Szereposztás</label><div className="flex gap-2"><select className="flex-1 p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={pendingCharacterId} onChange={(e) => setPendingCharacterId(e.target.value)}><option value="">Válassz karaktert</option>{availableCharacters.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><button type="button" onClick={addExtraCharacter} className="px-3 py-2 rounded bg-indigo-800 text-sm font-semibold">Add</button></div></div><div className="space-y-2">{selectedCharacters.map((item) => <div key={item.id} className="flex items-center gap-2"><div className="w-40 text-xs text-gray-300 truncate">{item.name}</div><input className="w-28 p-1.5 rounded bg-gray-800 border border-gray-700 text-xs" value={aliasMap[item.id] || ''} onChange={(e) => setAliasMap((prev) => ({ ...prev, [item.id]: e.target.value }))} placeholder="Alias" maxLength={12} />{item.id !== primaryCharacterId && <button type="button" onClick={() => removeExtraCharacter(item.id)} className="text-xs px-2 py-1 rounded border border-gray-600">Remove</button>}</div>)}</div><div><label className="block mb-1 text-sm font-semibold text-gray-300">Shared action prompt</label><textarea className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={actionPrompt} onChange={(e) => setActionPrompt(e.target.value)} rows={2} /></div></div>
+                        <div>
+                          <label className="block mb-1 text-sm font-semibold text-gray-300">Helyszín preset</label>
+                          <select className="w-full p-2 rounded bg-gray-900 border border-gray-700 text-sm" value={locationPreset} onChange={(e) => setLocationPreset(e.target.value)}>
+                            {locationPresetOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                          </select>
+                        </div>
 
-                {isPaid && <div><label className="block mb-1 text-sm font-semibold text-gray-300">Camera</label><select className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={camera} onChange={(e) => setCamera(e.target.value)}>{cameraOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>
-                </div>}
-                <div><label className="block mb-1 text-sm font-semibold text-gray-300">Képarány</label><select className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value as AspectRatio16x9)}>{ASPECT_RATIO_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>
-                <div><label className="block mb-1 text-sm font-semibold text-gray-300">Style</label><select className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={style} onChange={(e) => setStyle(e.target.value)}>{styleOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>
-                {isPaid && <div><label className="block mb-1 text-sm font-semibold text-gray-300">Style Intensity: <span className="text-indigo-400">{styleIntensity}</span></label><input type="range" min={0} max={100} value={styleIntensity} onChange={(e) => setStyleIntensity(Number(e.target.value))} className="w-full accent-indigo-500" /></div>
-                </div>}
-                {isPaid && <div><label className="flex items-center gap-2 text-sm text-gray-300"><input type="checkbox" checked={compareMode} onChange={(e) => setCompareMode(e.target.checked)} />Compare with second style (A/B)</label></div>
-                {compareMode && isPaid && <div><label className="block mb-1 text-sm font-semibold text-gray-300">Compare Style</label><select className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-sm" value={compareStyle} onChange={(e) => setCompareStyle(e.target.value)}>{styleOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>}
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block mb-1 text-sm font-semibold text-gray-300">Geometria</label>
+                            <textarea className="w-full p-2 rounded bg-gray-900 border border-gray-700 text-sm" value={locationGeometry} onChange={(e) => setLocationGeometry(e.target.value)} rows={2} />
+                          </div>
+                          <div>
+                            <label className="block mb-1 text-sm font-semibold text-gray-300">Világítás és idő</label>
+                            <textarea className="w-full p-2 rounded bg-gray-900 border border-gray-700 text-sm" value={locationLighting} onChange={(e) => setLocationLighting(e.target.value)} rows={2} />
+                          </div>
+                          <div>
+                            <label className="block mb-1 text-sm font-semibold text-gray-300">Paletta és textúra</label>
+                            <textarea className="w-full p-2 rounded bg-gray-900 border border-gray-700 text-sm" value={locationPalette} onChange={(e) => setLocationPalette(e.target.value)} rows={2} />
+                          </div>
+                          <div>
+                            <label className="block mb-1 text-sm font-semibold text-gray-300">Fix kellékek</label>
+                            <textarea className="w-full p-2 rounded bg-gray-900 border border-gray-700 text-sm" value={locationProps} onChange={(e) => setLocationProps(e.target.value)} rows={2} />
+                          </div>
+                          <div>
+                            <label className="block mb-1 text-sm font-semibold text-gray-300">Kamerafolytonossági szabályok</label>
+                            <textarea className="w-full p-2 rounded bg-gray-900 border border-gray-700 text-sm" value={locationCameraContinuity} onChange={(e) => setLocationCameraContinuity(e.target.value)} rows={2} />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block mb-1 text-sm font-semibold text-gray-300">Shot template</label>
+                          <select className="w-full p-2 rounded bg-gray-900 border border-gray-700 text-sm" value={shotTemplate} onChange={(e) => setShotTemplate(e.target.value as ShotTemplate)}>
+                            {SHOT_TEMPLATE_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                          </select>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-300">
+                          <label className="flex items-center gap-2"><input type="checkbox" checked={lockGeometry} onChange={(e) => setLockGeometry(e.target.checked)} />Geometria rögzítése</label>
+                          <label className="flex items-center gap-2"><input type="checkbox" checked={lockLighting} onChange={(e) => setLockLighting(e.target.checked)} />Világítás rögzítése</label>
+                          <label className="flex items-center gap-2"><input type="checkbox" checked={lockPalette} onChange={(e) => setLockPalette(e.target.checked)} />Paletta rögzítése</label>
+                          <label className="flex items-center gap-2"><input type="checkbox" checked={lockProps} onChange={(e) => setLockProps(e.target.checked)} />Kellékek rögzítése</label>
+                          <label className="flex items-center gap-2"><input type="checkbox" checked={lockCameraRules} onChange={(e) => setLockCameraRules(e.target.checked)} />Kamerafolytonosság rögzítése</label>
+                        </div>
+
+                        <div>
+                          <label className="block mb-1 text-sm font-semibold text-gray-300">Continuity notes</label>
+                          <textarea className="w-full p-2 rounded bg-gray-900 border border-gray-700 text-sm" value={continuityNotes} onChange={(e) => setContinuityNotes(e.target.value)} rows={2} />
+                        </div>
+
+                        <div>
+                          <label className="block mb-1 text-sm font-semibold text-gray-300">Kamera</label>
+                          <select className="w-full p-2 rounded bg-gray-900 border border-gray-700 text-sm" value={camera} onChange={(e) => setCamera(e.target.value)}>
+                            {cameraOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block mb-1 text-sm font-semibold text-gray-300">Style intensity: {styleIntensity}</label>
+                          <input type="range" min={0} max={100} value={styleIntensity} onChange={(e) => setStyleIntensity(Number(e.target.value))} className="w-full accent-indigo-500" />
+                        </div>
+
+                        <label className="flex items-center gap-2 text-sm text-gray-300">
+                          <input type="checkbox" checked={compareMode} onChange={(e) => setCompareMode(e.target.checked)} />
+                          A/B összehasonlítás
+                        </label>
+
+                        {compareMode && (
+                          <div>
+                            <label className="block mb-1 text-sm font-semibold text-gray-300">Második stílus</label>
+                            <select className="w-full p-2 rounded bg-gray-900 border border-gray-700 text-sm" value={compareStyle} onChange={(e) => setCompareStyle(e.target.value)}>
+                              {styleOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    </details>
+
+                    {storageInfo && <div className="text-xs text-gray-500">{storageInfo}</div>}
+                  </>
+                )}
+
                 {error && <div className="text-red-400 text-sm bg-red-950/50 border border-red-900 rounded px-3 py-2">{error}</div>}
-                <button type="submit" disabled={loading} className="w-full bg-gray-700 hover:bg-gray-600 disabled:opacity-50 py-2.5 rounded font-semibold text-sm flex items-center justify-center gap-2">{loading ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />Generating…</> : '✨ Generate Scene'}</button>
+
+                <button type="submit" disabled={loading} className="w-full bg-white hover:bg-gray-200 text-black disabled:opacity-50 py-3 rounded-lg font-semibold text-sm flex items-center justify-center gap-2">
+                  {loading ? 'Generálás…' : '✨ Kép generálása'}
+                </button>
               </form>
 
-              {result && !compareResult && <div className="flex flex-col items-center gap-3"><button type="button" className="focus:outline-none rounded" onClick={() => setPreviewImage(result)}><img src={result} alt="Generated scene" className="rounded shadow-lg max-w-full cursor-zoom-in" /></button><button type="button" onClick={() => handleUseForAnimation(result)} className="text-sm bg-indigo-800 px-5 py-2 rounded font-semibold">▶ Animate this image</button></div>}
-              {result && compareResult && <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-gray-800 rounded p-3"><div className="text-xs text-gray-400 mb-2">A: {style}</div><button type="button" className="w-full" onClick={() => setPreviewImage(result)}><img src={result} alt="A" className="rounded w-full cursor-zoom-in" /></button><button type="button" onClick={() => handleUseForAnimation(result)} className="mt-2 w-full text-xs bg-indigo-800 py-1.5 rounded">▶ Animate A</button></div><div className="bg-gray-800 rounded p-3"><div className="text-xs text-gray-400 mb-2">B: {compareStyle}</div><button type="button" className="w-full" onClick={() => setPreviewImage(compareResult)}><img src={compareResult} alt="B" className="rounded w-full cursor-zoom-in" /></button><button type="button" onClick={() => handleUseForAnimation(compareResult)} className="mt-2 w-full text-xs bg-indigo-800 py-1.5 rounded">▶ Animate B</button></div></div>}
+              {result && (
+                <div className="space-y-4">
+                  {compareResult ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-gray-900 rounded p-3">
+                        <div className="text-xs text-gray-400 mb-2">A: {style}</div>
+                        <button type="button" className="w-full" onClick={() => setPreviewImage(result)}>
+                          <img src={result} alt="A" className="rounded w-full cursor-zoom-in" />
+                        </button>
+                      </div>
+                      <div className="bg-gray-900 rounded p-3">
+                        <div className="text-xs text-gray-400 mb-2">B: {compareStyle}</div>
+                        <button type="button" className="w-full" onClick={() => setPreviewImage(compareResult)}>
+                          <img src={compareResult} alt="B" className="rounded w-full cursor-zoom-in" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-3">
+                      <button type="button" className="focus:outline-none rounded" onClick={() => setPreviewImage(result)}>
+                        <img src={result} alt="Generated scene" className="rounded shadow-lg max-w-full cursor-zoom-in" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
-
 
           {activeTab === 'gallery' && <Gallery characterId={primaryCharacterId} onUseForAnimation={handleUseForAnimation} />}
         </div>
