@@ -489,6 +489,25 @@ export default function CharacterDetailPage() {
 
                 <div className="rounded-lg border border-gray-800 bg-zinc-950 p-4">
                   <div className="text-sm font-semibold text-gray-300 mb-3">Szereplők</div>
+
+                  <div className="flex gap-2 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => { setExtraCharacterIds([]); setPendingCharacterId(""); }}
+                      className={selectedCharacters.length === 1 ? "flex-1 px-3 py-2 rounded border border-white bg-white text-black text-xs font-semibold" : "flex-1 px-3 py-2 rounded border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 text-xs font-semibold"}
+                    >
+                      1 karakter
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPendingCharacterId((current) => current || availableCharacters[0]?.id || "")}
+                      disabled={!availableCharacters.length}
+                      className={selectedCharacters.length > 1 ? "flex-1 px-3 py-2 rounded border border-white bg-white text-black text-xs font-semibold" : "flex-1 px-3 py-2 rounded border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 text-xs font-semibold"}
+                    >
+                      2 karakter
+                    </button>
+                  </div>
+
                   <div className="flex flex-wrap gap-2 mb-3">
                     {selectedCharacters.map((item) => (
                       <span key={item.id} className="rounded-full border border-gray-700 px-3 py-1 text-xs text-gray-300">
@@ -496,6 +515,7 @@ export default function CharacterDetailPage() {
                       </span>
                     ))}
                   </div>
+
                   <div className="flex gap-2">
                     <select
                       className="flex-1 p-2 rounded bg-gray-900 border border-gray-700 text-sm"
@@ -507,10 +527,26 @@ export default function CharacterDetailPage() {
                         <option key={item.id} value={item.id}>{item.name}</option>
                       ))}
                     </select>
-                    <button type="button" onClick={addExtraCharacter} className="px-3 py-2 rounded bg-gray-800 border border-gray-700 text-sm">
+                    <button
+                      type="button"
+                      onClick={addExtraCharacter}
+                      disabled={!pendingCharacterId}
+                      className="px-3 py-2 rounded bg-gray-800 border border-gray-700 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
                       Hozzáadás
                     </button>
                   </div>
+
+                  {selectedCharacters.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => { setExtraCharacterIds([]); setPendingCharacterId(""); }}
+                      className="mt-3 text-xs px-3 py-2 rounded border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500"
+                    >
+                      Vissza 1 karakterre
+                    </button>
+                  )}
+
                   {isPaid && selectedCharacters.length > 1 && (
                     <div className="mt-3 space-y-2">
                       {selectedCharacters.map((item) => (
@@ -518,7 +554,7 @@ export default function CharacterDetailPage() {
                           <div className="w-40 text-xs text-gray-400 truncate">{item.name}</div>
                           <input
                             className="w-28 p-1.5 rounded bg-gray-900 border border-gray-700 text-xs"
-                            value={aliasMap[item.id] || ''}
+                            value={aliasMap[item.id] || ""}
                             onChange={(e) => setAliasMap((prev) => ({ ...prev, [item.id]: e.target.value }))}
                             placeholder="Alias"
                             maxLength={12}
