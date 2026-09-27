@@ -253,3 +253,90 @@ begin
   return found;
 end;
 $$;
+
+
+create or replace function public.apply_credit_purchase(
+  p_user_id uuid,
+  p_stripe_payment_id text,
+  p_package_id text,
+  p_credits integer,
+  p_character_slots integer,
+  p_amount integer,
+  p_currency text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.role() <> 'service_role' then
+    return false;
+  end if;
+
+  if p_user_id is null
+    or p_stripe_payment_id is null
+    or p_package_id is null
+    or p_credits <= 0
+    or p_character_slots < 0
+    or p_amount <= 0
+    or p_currency is null then
+    return false;
+  end if;
+
+  if exists (
+    select 1 from public.purchases
+    where stripe_payment_id = p_stripe_payment_id
+  ) then
+    return true;
+  end if;
+
+  insert into public.purchases (
+    user_id,
+    stripe_payment_id,
+    package_id,
+    credits,
+    character_slots,
+    amount,
+    currency,
+    status
+  ) values (
+    p_user_id,
+    p_stripe_payment_id,
+    p_package_id,
+    p_credits,
+    p_character_slots,
+    p_amount,
+    p_currency,
+    'completed'
+  );
+
+  update public.profiles
+  set
+    plan = 'paid',
+    generation_credits = generation_credits + p_credits,
+    character_slots = character_slots + p_character_slots,
+    updated_at = now()
+  where id = p_user_id;
+
+  if not found then
+    raise exception 'Profile not found for purchase';
+  end if;
+
+  insert into public.credit_transactions (
+    user_id,
+    type,
+    amount,
+    reference,
+    metadata
+  ) values (
+    p_user_id,
+    'purchase',
+    p_credits,
+    p_stripe_payment_id,
+    jsonb_build_object('packageId', p_package_id, 'characterSlots', p_character_slots, 'amount', p_amount, 'currency', p_currency)
+  );
+
+  return true;
+end;
+$$;
