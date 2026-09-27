@@ -1,32 +1,31 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { createSupabaseBrowserClient } from '../../lib/supabase/client';
 
 export default function AuthPage() {
   const supabase = createSupabaseBrowserClient();
-  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const callbackError = searchParams.get('error');
-    const message = searchParams.get('message');
+    const params = new URLSearchParams(window.location.search);
+    const callbackError = params.get('error');
+    const message = params.get('message');
 
     if (callbackError) {
       setError(message || callbackError);
     }
-  }, [searchParams]);
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setLoading(true);
     setError('');
 
-    const next = searchParams.get('next');
+    const next = new URLSearchParams(window.location.search).get('next');
     const callbackUrl = new URL('/auth/callback', window.location.origin);
 
     if (next && next.startsWith('/')) {
