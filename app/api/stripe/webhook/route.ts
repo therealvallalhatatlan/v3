@@ -27,11 +27,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 400 });
   }
 
-  if (event.type !== 'checkout.session.completed') {
+  if (event.type !== 'checkout.session.completed' && event.type !== 'checkout.session.async_payment_succeeded') {
     return NextResponse.json({ received: true });
   }
 
   const session = event.data.object as any;
+  if (event.type === 'checkout.session.completed' && session.payment_status !== 'paid') {
+    return NextResponse.json({ received: true, pending: true });
+  }
   const userId = String(session.metadata?.userId || session.client_reference_id || '').trim();
   const packageId = String(session.metadata?.packageId || '').trim();
   const credits = Number(session.metadata?.credits || 0);
