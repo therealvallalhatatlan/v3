@@ -1,5 +1,7 @@
 'use client';
 
+import LoadingScreen from '../../components/LoadingScreen';
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -75,7 +77,7 @@ export default function CreateCharacterPage() {
   };
 
   if (!account) {
-    return <main className="min-h-screen bg-black text-gray-100 flex items-center justify-center font-mono">Betöltés…</main>;
+    return <LoadingScreen />;
   }
 
   if (!account.authenticated) {
