@@ -133,7 +133,7 @@ export default function PresetsPage() {
 
   return (
     <main className="min-h-screen bg-black text-gray-100 font-mono p-4 md:p-8">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-6xl">
         <header className="flex flex-wrap items-start justify-between gap-4 mb-8">
           <div>
             <div className="text-xs uppercase tracking-[0.25em] text-indigo-400 mb-2">Generálási konfiguráció</div>
