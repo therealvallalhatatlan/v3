@@ -131,7 +131,7 @@ export default function CreditsPage() {
 
   return (
     <main className="min-h-screen bg-black text-zinc-100 font-mono px-6 py-10">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <div className="mb-10">
           <div className="text-xs tracking-[0.3em] text-zinc-600 mb-2">V3 / CREDITS</div>
           <h1 className="text-3xl font-bold">Kreditek</h1>
