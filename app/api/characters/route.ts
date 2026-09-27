@@ -37,6 +37,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No character slots available.' }, { status: 403 });
   }
 
+  const { data: reservedSlot, error: reserveSlotError } = await supabase.rpc('reserve_character_slot', {
+    p_user_id: user.id,
+  });
+
+  if (reserveSlotError) {
+    return NextResponse.json({ error: 'Unable to reserve character slot' }, { status: 500 });
+  }
+
+  if (!reservedSlot) {
+    return NextResponse.json({ error: 'No character slots available.' }, { status: 403 });
+  }
+
   const data = await req.json();
   const { name, description, traits, imageUrls } = data;
   const id = uuidv4();
@@ -87,21 +99,10 @@ export async function POST(req: NextRequest) {
     if (imagesError) throw imagesError;
   } catch (mediaError: any) {
     await supabase.from('characters').delete().eq('id', id).eq('owner_id', user.id);
+    await supabase.rpc('refund_character_slot', { p_user_id: user.id });
     return NextResponse.json({ error: mediaError?.message || 'Failed to store reference images' }, { status: 500 });
   }
 
-  const { error: slotError } = await supabase
-    .from('profiles')
-    .update({
-      character_slots: Math.max(0, (profile.character_slots ?? 0) - 1),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', user.id)
-    .gt('character_slots', 0);
-
-  if (slotError) {
-    console.error('Character slot update error:', slotError);
-  }
 
   // Legacy local persistence is intentionally no longer used as source of truth.
   return NextResponse.json({ ...character, ownerId: user.id, type: 'user' }, { status: 201 });
