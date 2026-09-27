@@ -69,20 +69,19 @@ export default function HomePage() {
           <div className="grid w-full items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
             <section>
               <div className="mb-5 flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600">
-                <span>V3 / VALÓSÁG MOTOR</span>
-                <span className="text-zinc-800">///</span>
                 <span>VALLALHATATLAN</span>
+                <span>VALÓSÁG MOTOR / V3</span>
+                <span className="text-zinc-800">///</span>
               </div>
 
               <h1 className="max-w-3xl text-5xl font-extrabold leading-[0.95] tracking-[-0.04em] sm:text-6xl lg:text-7xl">
-                Karakterekből
+                Karakter be.
                 <br />
-                <span className="text-zinc-400">jelenetek.</span>
+                <span className="text-zinc-400">Valóság ki.</span>
               </h1>
 
               <p className="mt-7 max-w-xl text-base leading-7 text-zinc-400 sm:text-lg">
-                Karakteralapú képgenerálás saját jelenetekhez. Válassz karaktert, helyszínt,
-                kamerát és stílust. Karakter be. Valóság ki.
+                Bedobsz egy karaktert. Akár magadat is. Adsz neki egy helyet, egy kamerát és egy stílust. Aztán generálunk egy valóságot, amit utólag nehéz megmagyarázni.
               </p>
 
               <div className="mt-9 flex flex-wrap items-center gap-3">
