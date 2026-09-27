@@ -131,8 +131,29 @@ export async function POST(req: NextRequest) {
     const isPaid = profile.plan === 'paid' || profile.plan === 'admin';
     const compareStyleKey = isPaid ? requestedCompareStyleKey : null;
     const intensity = isPaid ? clampIntensity(styleIntensity) : 65;
-    const normalizedScenePackage = isPaid ? normalizeScenePackage(scenePackage) : undefined;
-    const cameraKeyForUser = isPaid ? cameraKey : 'wide';
+    const requestedShotTemplate = String(scenePackage?.shotTemplate || 'establishing-wide').trim() as ShotTemplate;
+    const freeScenePackage = {
+      locationProfile: {
+        preset: String(scenePackage?.locationProfile?.preset || 'urban-street').trim(),
+        detail: normalizeText(location, 800),
+        geometry: '',
+        lightingAndTime: '',
+        paletteAndTexture: '',
+        fixedProps: '',
+        cameraContinuity: '',
+      },
+      continuity: {
+        lockGeometry: true,
+        lockLighting: true,
+        lockPalette: true,
+        lockProps: true,
+        lockCameraRules: true,
+      },
+      shotTemplate: ALLOWED_SHOT_TEMPLATES.includes(requestedShotTemplate) ? requestedShotTemplate : 'establishing-wide',
+      bilingualInput: { sourceLanguage: 'mixed' as const },
+    };
+    const normalizedScenePackage = normalizeScenePackage(isPaid ? scenePackage : freeScenePackage);
+    const cameraKeyForUser = cameraKey;
     const resolvedLocation = resolveLocationText(location, normalizedScenePackage);
 
     const castAliases = charactersForGeneration.map((character, index) => {
