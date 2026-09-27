@@ -36,7 +36,7 @@ function wrapText(text: string, maxChars: number) {
 }
 
 function characterFileName(value: string | null) {
-  const requested = String(value || 'character.png').trim();
+  const requested = String(value || 'malac.jpg').trim();
   const file = requested.replace(/^.*[\\/]/, '');
   return /^[a-zA-Z0-9._-]+$/.test(file) ? file : 'character.png';
 }
@@ -111,11 +111,11 @@ export async function GET(request: Request) {
     <ellipse cx="930" cy="500" rx="240" ry="44" fill="#000000" fill-opacity=".50" filter="url(#shadow)"/>
     <rect x="55" y="50" width="1090" height="530" rx="18" fill="none" stroke="#ffffff" stroke-opacity=".12"/>
 
-    <circle cx="1000" cy="270" r="205" fill="none" stroke="#ffffff" stroke-opacity=".07"/>
-    <circle cx="1000" cy="270" r="145" fill="#000000" fill-opacity=".18" stroke="#ffffff" stroke-opacity=".045"/>
-
     <path d="M72 142H330" stroke="#ffffff" stroke-opacity=".06"/>
     <path d="M870 520H1128" stroke="#ffffff" stroke-opacity=".06"/>
+
+    <rect x="748" y="92" width="344" height="416" rx="12" fill="#050505" stroke="#ffffff" stroke-opacity=".10"/>
+    <rect x="758" y="102" width="324" height="396" rx="8" fill="#111113"/>
 
     <text x="92" y="125" class="small">${escapeXml(eyebrow)} <tspan fill="#414145">///</tspan> VALLALHATATLAN</text>
     ${titleSvg}
@@ -149,9 +149,10 @@ export async function GET(request: Request) {
     const character = await sharp(characterBuffer)
       .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .resize({
-        width: 390,
-        height: 455,
-        fit: 'contain',
+        width: 324,
+        height: 396,
+        fit: 'cover',
+        position: 'attention',
         withoutEnlargement: false,
       })
       .png()
@@ -161,8 +162,8 @@ export async function GET(request: Request) {
       .composite([
         {
           input: character,
-          left: 765,
-          top: 78,
+            left: 758,
+          top: 102,
           blend: 'over',
         },
       ])
