@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient, getCurrentUser } from '../../../lib/supabase/server';
+import { getAppCharacters } from '../../../lib/supabase/characters';
 import { uploadDataUrl } from '../../../lib/supabase/media';
-import { deleteCharacter, saveCharacter, getAllCharacters } from '../../../lib/storage';
+import { deleteCharacter } from '../../../lib/storage';
 import { Character } from '../../../types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -9,28 +10,8 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
-  const supabase = await createSupabaseServerClient();
-  const { data: dbCharacters, error } = await supabase
-    .from('characters')
-    .select('id, owner_id, type, name, description, traits, created_at')
-    .or(`type.eq.system,owner_id.eq.${user.id}`)
-    .order('created_at', { ascending: true });
-
-  if (!error && dbCharacters) {
-    return NextResponse.json(dbCharacters.map((character) => ({
-      id: character.id,
-      name: character.name,
-      description: character.description,
-      traits: Array.isArray(character.traits) ? character.traits : [],
-      imagePaths: [],
-      createdAt: new Date(character.created_at).getTime(),
-      type: character.type,
-      ownerId: character.owner_id,
-    })));
-  }
-
-  // Temporary fallback for the legacy local store during migration.
-  return NextResponse.json(getAllCharacters());
+  const characters = await getAppCharacters();
+  return NextResponse.json(characters);
 }
 
 export async function POST(req: NextRequest) {
