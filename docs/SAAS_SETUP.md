@@ -65,3 +65,31 @@ The service-role key is only needed for local migration/admin tooling.
 - failed generation refunds the reserved credits
 
 Stripe credit packages are intentionally not activated yet.
+
+## 6. Stripe credit purchases
+
+The app uses Stripe Checkout for one-time credit purchases. Stripe Checkout provides the hosted payment page, and fulfillment is handled from the webhook rather than the browser redirect. citeturn407072view0turn407072view1
+
+Set these Vercel environment variables:
+
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `CREDIT_PACKAGES_JSON`
+
+Example:
+
+`[{"id":"starter","name":"Starter","credits":50,"characterSlots":0,"amountHuf":1990},{"id":"creator","name":"Creator","credits":200,"characterSlots":1,"amountHuf":5990},{"id":"studio","name":"Studio","credits":1000,"characterSlots":5,"amountHuf":19900}]`
+
+The amounts above are only an example configuration. Replace them with the pricing you actually want to sell.
+
+Register this webhook endpoint in Stripe:
+
+`https://YOUR-DOMAIN/api/stripe/webhook`
+
+The webhook handles `checkout.session.completed` and asynchronous payment success events, verifies the Stripe signature, and applies the purchase once. Stripe recommends signature verification and webhook-driven fulfillment for these flows. citeturn407072view1
+
+The purchase page is:
+
+`/credits`
+
+Do not put the Stripe secret key or Supabase service-role key in client-exposed variables.
