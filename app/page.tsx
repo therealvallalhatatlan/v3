@@ -25,7 +25,7 @@ export const metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Vállalhatatlan Illusztrációs Motor',
+    title: 'VÁLLALHATATLAN // VALÓSÁG MOTOR',
     description: 'Karakterekből jelenetek. Karakterhű képgenerálás analóg, noir és VHS hangulattal.',
     images: ['/api/og?variant=landing&v=7'],
   },
