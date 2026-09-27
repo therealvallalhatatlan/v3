@@ -28,6 +28,7 @@ export default function CreateCharacterPage() {
   }, []);
 
   const isPaid = account?.plan === 'paid' || account?.plan === 'admin';
+  const isAdmin = account?.plan === 'admin';
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) setImages(Array.from(e.target.files).slice(0, 5));
@@ -128,13 +129,15 @@ export default function CreateCharacterPage() {
         </div>
 
         {typeof account.characterSlots === 'number' && (
-          <div className="mb-4 text-xs text-gray-500">Szabad karakterhely: {account.characterSlots}</div>
+          <div className="mb-4 text-xs text-gray-500">
+            {isAdmin ? 'Admin hozzáférés: korlátlan karakterhely' : `Szabad karakterhely: ${account.characterSlots}`}
+          </div>
         )}
 
         {error && <div className="text-red-500 mb-2">{error}</div>}
 
-        <button type="submit" className="w-full bg-gray-800 py-2 rounded font-semibold hover:bg-gray-700 disabled:opacity-50" disabled={loading || (account.characterSlots ?? 0) < 1}>
-          {loading ? 'Létrehozás…' : (account.characterSlots ?? 0) < 1 ? 'Nincs szabad karakterhely' : 'Létrehozás'}
+        <button type="submit" className="w-full bg-gray-800 py-2 rounded font-semibold hover:bg-gray-700 disabled:opacity-50" disabled={loading || (!isAdmin && (account.characterSlots ?? 0) < 1)}>
+          {loading ? 'Létrehozás…' : (!isAdmin && (account.characterSlots ?? 0) < 1) ? 'Nincs szabad karakterhely' : 'Létrehozás'}
         </button>
       </form>
     </main>
