@@ -15,7 +15,7 @@ export const metadata = {
     url: 'https://engine.vallalhatatlan.online/',
     images: [
       {
-        url: '/opengraph-image?v=2',
+        url: '/api/og?variant=landing&v=6',
         width: 1200,
         height: 630,
         type: 'image/png',
@@ -27,7 +27,7 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'Vállalhatatlan Illusztrációs Motor',
     description: 'Karakterekből jelenetek. Karakterhű képgenerálás analóg, noir és VHS hangulattal.',
-    images: ['/opengraph-image?v=2'],
+    images: ['/api/og?variant=landing&v=6'],
   },
 };
 
