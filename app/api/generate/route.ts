@@ -9,6 +9,7 @@ import { AspectRatio16x9, LocationPreset, SceneInput, ScenePackageInput, ShotTem
 import { GeneratedImageMeta } from '../../../lib/storage';
 import { normalizeToPromptEnglish } from '../../../lib/sceneMapper';
 import { getPreset } from '../../../lib/presetStore';
+import { createSupabaseServerClient, getCurrentUser } from '../../../lib/supabase/server';
 
 function clampIntensity(value: unknown): number {
   const parsed = Number(value);
@@ -91,7 +92,13 @@ function resolveLocationText(location: unknown, scenePackage?: ScenePackageInput
 }
 
 export async function POST(req: NextRequest) {
+  let reservedCredits = 0;
+  let currentUserId = '';
   try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    currentUserId = user.id;
+
     const data = await req.json();
     const { characterId, characterIds, aliasMap, location, mood, actionPrompt, camera, aspectRatio, style, styleIntensity, compareStyle, textOnly, scenePackage } = data;
     const normalizedCharacterIds = Array.from(new Set([...(Array.isArray(characterIds) ? characterIds : []), characterId].map((id) => String(id || '').trim()).filter(Boolean)));
@@ -144,6 +151,43 @@ export async function POST(req: NextRequest) {
       return buildCharacterDNAFromCharacter(character, explicitAlias, index);
     });
     const isMultiCharacter = characterDNAList.length > 1;
+    const isCompare = Boolean(compareStyleKey);
+    const creditCost = isCompare ? 2 : 1;
+
+    const supabase = await createSupabaseServerClient();
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('plan, generation_credits')
+      .eq('id', currentUserId)
+      .maybeSingle();
+
+    if (profileError) {
+      return NextResponse.json({ error: 'Unable to load credit balance' }, { status: 500 });
+    }
+
+    if (!profile) {
+      return NextResponse.json({ error: 'User profile not initialized' }, { status: 403 });
+    }
+
+    if ((profile.generation_credits ?? 0) < creditCost) {
+      return NextResponse.json({ error: 'Not enough credits', requiredCredits: creditCost, availableCredits: profile.generation_credits ?? 0 }, { status: 402 });
+    }
+
+    const { data: reserved, error: reserveError } = await supabase.rpc('reserve_generation_credits', {
+      p_user_id: currentUserId,
+      p_cost: creditCost,
+    });
+
+    if (reserveError) {
+      console.error('Credit reservation error:', reserveError);
+      return NextResponse.json({ error: 'Unable to reserve generation credits' }, { status: 500 });
+    }
+
+    if (!reserved) {
+      return NextResponse.json({ error: 'Not enough credits', requiredCredits: creditCost }, { status: 402 });
+    }
+
+    reservedCredits = creditCost;
     const prompt = isMultiCharacter ? buildFinalPromptMulti(characterDNAList, scene) : buildFinalPrompt(characterDNAList[0], scene);
     const referenceImages = selectBalancedReferenceImages(charactersForGeneration);
     const primaryCharacterId = normalizedCharacterIds[0];
@@ -202,8 +246,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, imagePath, imagePathB, image: imagePath, compareImage: imagePathB, prompt, comparePrompt, characterIds: normalizedCharacterIds, aspectRatio: aspectRatioKey, style: styleKey, compareStyle: compareStyleKey, locationProfileId: normalizedScenePackage?.locationProfileId, locationFingerprint });
     }
 
-    return NextResponse.json({ ok: true, imagePath, image: imagePath, prompt, characterIds: normalizedCharacterIds, aspectRatio: aspectRatioKey, style: styleKey, locationProfileId: normalizedScenePackage?.locationProfileId, locationFingerprint });
+    const { error: eventError } = await supabase.from('generation_events').insert({
+      user_id: currentUserId,
+      status: 'success',
+      provider: 'gemini',
+      credits: reservedCredits,
+      metadata: { characterIds: normalizedCharacterIds, compare: isCompare },
+    }).select().maybeSingle();
+    if (eventError) console.error('Generation event log error:', eventError);
+
+    return NextResponse.json({ ok: true, imagePath, image: imagePath, prompt, characterIds: normalizedCharacterIds, aspectRatio: aspectRatioKey, style: styleKey, locationProfileId: normalizedScenePackage?.locationProfileId, locationFingerprint, creditCost: reservedCredits });
   } catch (error: any) {
+    if (currentUserId && reservedCredits > 0) {
+      try {
+        const supabase = await createSupabaseServerClient();
+        await supabase.rpc('refund_generation_credits', {
+          p_user_id: currentUserId,
+          p_cost: reservedCredits,
+          p_reference: 'generation_error',
+        });
+        await supabase.from('generation_events').insert({
+          user_id: currentUserId,
+          status: 'failed',
+          provider: 'gemini',
+          credits: reservedCredits,
+          metadata: { error: error?.message || 'unknown error' },
+        });
+      } catch (refundError) {
+        console.error('Credit refund error:', refundError);
+      }
+    }
     console.error('Generation error:', error);
     return NextResponse.json({ error: error?.message || 'Generation failed' }, { status: 500 });
   }
