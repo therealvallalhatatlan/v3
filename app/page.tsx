@@ -42,8 +42,8 @@ export default function HomePage() {
   };
 
   return (
-    <main className="min-h-screen bg-black text-zinc-100 font-mono flex flex-col items-center max-w-6xl mx-auto px-4 mt-6">
-      <div className="w-full max-w-6xl">
+    <main className="min-h-screen bg-black text-zinc-100 font-mono flex flex-col items-center max-w-7xl mx-auto px-6 mt-6">
+      <div className="w-full max-w-7xl">
         <div className="flex justify-between items-center mb-8 gap-4">
           <h1 className="text-3xl font-bold tracking-tight">Karaktereid</h1>
         </div>

@@ -17,9 +17,9 @@ export default function TopNav() {
       <div className="mx-auto flex min-h-16 w-full max-w-7xl items-center justify-between gap-6 px-4 py-3 md:px-6">
         <Link
           href="/"
-          className="shrink-0 [font-family:var(--font-montserrat)] text-sm font-bold italic tracking-[-0.02em] text-white md:text-base"
+          className="shrink-0 [font-family:var(--font-montserrat)] text-sm font-bold italic tracking-[-0.02em] text-white"
         >
-          Vállalhatatlan Illusztrációs Motor
+           Vállalhatatlan Illusztrációs Motor🐰 
         </Link>
 
         <nav className="flex items-center gap-1 overflow-x-auto" aria-label="Fő navigáció">
