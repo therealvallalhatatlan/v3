@@ -594,13 +594,6 @@ export default function CharacterDetailPage() {
                           </div>
                         </div>
 
-                        <div>
-                          <label className="block mb-1 text-sm font-semibold text-gray-300">Helyszín preset</label>
-                          <select className="w-full p-2 rounded bg-gray-900 border border-gray-700 text-sm" value={locationPreset} onChange={(e) => setLocationPreset(e.target.value)}>
-                            {locationPresetOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                          </select>
-                        </div>
-
                         <div className="space-y-3">
                           <div>
                             <label className="block mb-1 text-sm font-semibold text-gray-300">Geometria</label>
@@ -624,13 +617,6 @@ export default function CharacterDetailPage() {
                           </div>
                         </div>
 
-                        <div>
-                          <label className="block mb-1 text-sm font-semibold text-gray-300">Shot template</label>
-                          <select className="w-full p-2 rounded bg-gray-900 border border-gray-700 text-sm" value={shotTemplate} onChange={(e) => setShotTemplate(e.target.value as ShotTemplate)}>
-                            {SHOT_TEMPLATE_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                          </select>
-                        </div>
-
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-300">
                           <label className="flex items-center gap-2"><input type="checkbox" checked={lockGeometry} onChange={(e) => setLockGeometry(e.target.checked)} />Geometria rögzítése</label>
                           <label className="flex items-center gap-2"><input type="checkbox" checked={lockLighting} onChange={(e) => setLockLighting(e.target.checked)} />Világítás rögzítése</label>
@@ -642,13 +628,6 @@ export default function CharacterDetailPage() {
                         <div>
                           <label className="block mb-1 text-sm font-semibold text-gray-300">Continuity notes</label>
                           <textarea className="w-full p-2 rounded bg-gray-900 border border-gray-700 text-sm" value={continuityNotes} onChange={(e) => setContinuityNotes(e.target.value)} rows={2} />
-                        </div>
-
-                        <div>
-                          <label className="block mb-1 text-sm font-semibold text-gray-300">Kamera</label>
-                          <select className="w-full p-2 rounded bg-gray-900 border border-gray-700 text-sm" value={camera} onChange={(e) => setCamera(e.target.value)}>
-                            {cameraOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                          </select>
                         </div>
 
                         <div>
