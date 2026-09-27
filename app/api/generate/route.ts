@@ -212,7 +212,7 @@ export async function POST(req: NextRequest) {
         camera: cameraKey,
         aspect_ratio: aspectRatioKey,
         variant: recordVariant,
-        credit_cost: recordVariant === 'B' ? 0 : reservedCredits,
+        credit_cost: 1,
       });
       if (insertError) throw new Error(`Generated image metadata save failed: ${insertError.message}`);
       const url = await createSignedMediaUrl(storagePath, 3600);
