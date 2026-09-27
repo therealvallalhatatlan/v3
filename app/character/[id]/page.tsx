@@ -183,6 +183,9 @@ export default function CharacterDetailPage() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [generatedImages, setGeneratedImages] = useState<ImageInfo[]>([]);
   const [animatePreselectedUrl, setAnimatePreselectedUrl] = useState('');
+  const [generatedReferenceImages, setGeneratedReferenceImages] = useState<Array<{ id: string; path: string; url: string; created: number }>>([]);
+  const [referenceUploading, setReferenceUploading] = useState(false);
+  const [referenceError, setReferenceError] = useState('');
 
   const hydratedRef = useRef(false);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -366,7 +369,74 @@ export default function CharacterDetailPage() {
     } catch {}
   };
 
+  const loadReferenceImages = async () => {
+    if (!primaryCharacterId || character?.type !== 'system' || userPlan !== 'admin') return;
+    try {
+      const response = await fetch(`/api/characters/${primaryCharacterId}/images`, { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || 'Nem sikerült betölteni a referenciaképeket.');
+      setGeneratedReferenceImages(data.images || []);
+    } catch (error: any) {
+      setReferenceError(error?.message || 'Nem sikerült betölteni a referenciaképeket.');
+    }
+  };
+
+  const handleReferenceUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = '';
+    if (!files.length) return;
+
+    const slotsLeft = Math.max(0, 6 - generatedReferenceImages.length);
+    if (files.length > slotsLeft) {
+      setReferenceError(`Még ${slotsLeft} referenciahely maradt.`);
+      return;
+    }
+
+    setReferenceUploading(true);
+    setReferenceError('');
+    try {
+      const imageUrls = await Promise.all(files.map((file) => new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      })));
+
+      const response = await fetch(`/api/characters/${primaryCharacterId}/images`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrls }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || 'A feltöltés sikertelen.');
+
+      await loadReferenceImages();
+    } catch (error: any) {
+      setReferenceError(error?.message || 'A feltöltés sikertelen.');
+    } finally {
+      setReferenceUploading(false);
+    }
+  };
+
+  const handleDeleteReferenceImage = async (imageId: string) => {
+    if (!window.confirm('Biztosan törlöd ezt a referenciaképet?')) return;
+    setReferenceError('');
+    try {
+      const response = await fetch(`/api/characters/${primaryCharacterId}/images`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageId }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || 'A törlés sikertelen.');
+      await loadReferenceImages();
+    } catch (error: any) {
+      setReferenceError(error?.message || 'A törlés sikertelen.');
+    }
+  };
+
   useEffect(() => { loadGeneratedImages(); }, [primaryCharacterId]);
+  useEffect(() => { loadReferenceImages(); }, [primaryCharacterId, character?.type, userPlan]);
   useEffect(() => { if (result || compareResult) loadGeneratedImages(); }, [result, compareResult]);
 
   const persistHistoryValue = (key: string, value: string, current: string[], setState: (next: string[]) => void) => {
@@ -438,6 +508,52 @@ export default function CharacterDetailPage() {
             <div className="text-xs text-gray-500">{character.traits.join(', ')}</div>
           </div>
         </div>
+
+      {character.type === 'system' && userPlan === 'admin' && (
+        <section className="mb-6 rounded-xl border border-gray-800 bg-zinc-950 p-4">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="text-[10px] uppercase tracking-[0.25em] text-gray-600">ADMIN / REFERENCIA</div>
+              <h2 className="text-base font-bold text-white">Referenciaképek</h2>
+              <p className="mt-1 text-xs text-gray-500">A Gemini ezekből tanulja meg V megjelenését. Legfeljebb 6 kép használható.</p>
+            </div>
+            <div className="text-xs text-gray-600">{generatedReferenceImages.length} / 6 kép</div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
+            {generatedReferenceImages.map((image, index) => (
+              <div key={image.id || image.path} className="group relative overflow-hidden rounded-lg border border-gray-800 bg-black">
+                <img src={image.url} alt={`V referencia ${index + 1}`} className="aspect-square h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => handleDeleteReferenceImage(image.id)}
+                  className="absolute right-1.5 top-1.5 hidden rounded-md bg-black/80 px-2 py-1 text-[10px] text-gray-300 group-hover:block hover:bg-red-950 hover:text-red-200"
+                >
+                  Törlés
+                </button>
+              </div>
+            ))}
+
+            {generatedReferenceImages.length < 6 && (
+              <label className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-gray-700 bg-black/30 text-center transition hover:border-gray-500 hover:bg-zinc-900">
+                <span className="text-xl text-gray-500">+</span>
+                <span className="mt-1 px-2 text-[10px] text-gray-500">Kép hozzáadása</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleReferenceUpload}
+                  disabled={referenceUploading}
+                />
+              </label>
+            )}
+          </div>
+
+          {referenceUploading && <div className="mt-3 text-xs text-gray-500">Feltöltés…</div>}
+          {referenceError && <div className="mt-3 rounded-lg border border-red-900 bg-red-950/30 px-3 py-2 text-xs text-red-300">{referenceError}</div>}
+        </section>
+      )}
 
         <div className="flex gap-1 mb-4 bg-zinc-950 rounded-lg border border-gray-800 p-1">
           {(['generate', 'gallery'] as Tab[]).map((tab) => <button key={tab} type="button" onClick={() => setActiveTab(tab)} className={`flex-1 py-2 rounded text-sm font-semibold ${activeTab === tab ? 'bg-zinc-800 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-zinc-800'}`}>{tab === 'generate' ? '✨ ' : tab === 'animate' ? '▶ ' : '🖼 '}{tab.charAt(0).toUpperCase() + tab.slice(1)}</button>)}
