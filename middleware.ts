@@ -35,6 +35,7 @@ export async function middleware(request: NextRequest) {
 
   const isProtectedApi =
     pathname.startsWith('/api/generate') ||
+    pathname.startsWith('/api/animations') ||
     pathname.startsWith('/api/characters') ||
     pathname.startsWith('/api/generated') ||
     pathname.startsWith('/api/presets');
@@ -57,6 +58,7 @@ export const config = {
     '/character/:path*',
     '/presets/:path*',
     '/api/generate/:path*',
+    '/api/animations/:path*',
     '/api/characters/:path*',
     '/api/generated/:path*',
     '/api/presets/:path*',
