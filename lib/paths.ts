@@ -1,7 +1,11 @@
 import path from 'path';
 import fs from 'fs';
 
-const BASE_STORAGE = process.env.STORAGE_DIR || 'E:/ai-storage';
+// Vercel serverless functions do not have the local Windows E:/ai-storage path.
+// Keep the existing local default for development, but use the writable /tmp
+// filesystem in Vercel when STORAGE_DIR is not explicitly configured.
+const DEFAULT_STORAGE = process.env.VERCEL ? '/tmp/ai-storage' : 'E:/ai-storage';
+const BASE_STORAGE = process.env.STORAGE_DIR || DEFAULT_STORAGE;
 
 export function getStoragePath(...segments: string[]): string {
   return path.join(BASE_STORAGE, ...segments);
