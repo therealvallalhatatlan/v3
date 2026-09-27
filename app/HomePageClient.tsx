@@ -65,7 +65,7 @@ export default function HomePage() {
         <div className="pointer-events-none absolute -right-40 top-16 h-96 w-96 rounded-full border border-zinc-800/70" />
         <div className="pointer-events-none absolute -left-56 bottom-0 h-[30rem] w-[30rem] rounded-full border border-zinc-900" />
 
-        <div className="relative mx-auto flex min-h-[calc(100vh-65px)] w-full max-w-6xl items-center px-6 py-16">
+        <div className="relative mx-auto flex min-h-[calc(100vh-65px)] w-full max-w-6xl items-center px-4 md:px-0 py-16">
           <div className="grid w-full items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
             <section>
               <div className="mb-5 flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600">
