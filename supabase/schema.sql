@@ -84,6 +84,10 @@ create index if not exists credit_transactions_user_id_idx on public.credit_tran
 create index if not exists purchases_user_id_idx on public.purchases(user_id);
 create index if not exists generation_events_user_id_idx on public.generation_events(user_id);
 
+insert into storage.buckets (id, name, public)
+values ('v3-media', 'v3-media', false)
+on conflict (id) do nothing;
+
 alter table public.profiles enable row level security;
 alter table public.characters enable row level security;
 alter table public.character_images enable row level security;
@@ -140,7 +144,10 @@ drop policy if exists "own_purchases_select" on public.purchases;
 create policy "own_purchases_select" on public.purchases for select using (user_id = auth.uid());
 
 drop policy if exists "v3_media_select_own" on storage.objects;
-create policy "v3_media_select_own" on storage.objects for select using (bucket_id = 'v3-media' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "v3_media_select_own" on storage.objects for select using (
+  bucket_id = 'v3-media'
+  and ((storage.foldername(name))[1] = auth.uid()::text or (storage.foldername(name))[1] = 'system')
+);
 
 drop policy if exists "v3_media_insert_own" on storage.objects;
 create policy "v3_media_insert_own" on storage.objects for insert with check (bucket_id = 'v3-media' and (storage.foldername(name))[1] = auth.uid()::text);
