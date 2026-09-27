@@ -33,6 +33,7 @@ export default function TopNav() {
   const items = [
     { href: '/', label: 'Karakterek' },
     ...(isPaid ? [{ href: '/character/new', label: 'Karakter létrehozása' }] : []),
+    { href: '/credits', label: 'Kreditek' },
     ...(isPaid ? [{ href: '/presets', label: 'Presetek' }] : []),
   ];
 
