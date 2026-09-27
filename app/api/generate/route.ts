@@ -220,7 +220,7 @@ export async function POST(req: NextRequest) {
       recordVariant: 'single' | 'A' | 'B',
       recordPrompt: string,
     ) => {
-      const storagePath = await saveGeneratedImageToSupabase(imageBase64, currentUserId, generationId, aspectRatioKey);
+      const storagePath = await saveGeneratedImageToSupabase(imageBase64, currentUserId, generationId, aspectRatioKey, profile.plan === 'free');
       const { error: insertError } = await supabase.from('generated_images').insert({
         id: generationId,
         owner_id: currentUserId,
