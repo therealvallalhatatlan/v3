@@ -535,6 +535,27 @@ export default function CharacterDetailPage() {
                 </div>
 
                 <div>
+                  <label className="block mb-1 text-sm font-semibold text-gray-300">Helyszín preset</label>
+                  <select className="w-full p-3 rounded bg-gray-900 border border-gray-700 text-sm" value={locationPreset} onChange={(e) => setLocationPreset(e.target.value)}>
+                    {locationPresetOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-sm font-semibold text-gray-300">Kamera</label>
+                  <select className="w-full p-3 rounded bg-gray-900 border border-gray-700 text-sm" value={camera} onChange={(e) => setCamera(e.target.value)}>
+                    {cameraOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-sm font-semibold text-gray-300">Shot template</label>
+                  <select className="w-full p-3 rounded bg-gray-900 border border-gray-700 text-sm" value={shotTemplate} onChange={(e) => setShotTemplate(e.target.value as ShotTemplate)}>
+                    {SHOT_TEMPLATE_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                  </select>
+                </div>
+
+                <div>
                   <label className="block mb-1 text-sm font-semibold text-gray-300">Képarány</label>
                   <select
                     className="w-full p-3 rounded bg-gray-900 border border-gray-700 text-sm"
