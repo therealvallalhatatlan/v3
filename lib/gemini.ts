@@ -1,4 +1,3 @@
-
 function toImagePart(dataUrl: string) {
   const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
   if (!match) {
@@ -65,6 +64,7 @@ export async function generateImage(
     console.error('Gemini API error:', res.status, text);
     throw new Error(`Gemini API error: ${res.status} ${text}`);
   }
+
   const data = await res.json();
   console.log('GEMINI RESPONSE BODY:', JSON.stringify(data, null, 2));
   if (data.error) {
@@ -73,8 +73,22 @@ export async function generateImage(
   if (data.warnings) {
     console.warn('Gemini API warnings:', JSON.stringify(data.warnings, null, 2));
   }
+
+  const candidate = data.candidates?.[0];
+  const finishReason = candidate?.finishReason || candidate?.finish_reason || '';
+  const finishMessage = candidate?.finishMessage || candidate?.finish_message || '';
+
+  if (finishReason === 'IMAGE_SAFETY') {
+    console.warn('Gemini image blocked by safety filter:', finishMessage || 'No additional message provided');
+    throw new Error('A Gemini biztonsági szűrője blokkolta ezt a képgenerálást. Próbáld meg módosítani a promptot vagy a referencia képeket.');
+  }
+
+  if (finishMessage) {
+    console.log('Gemini finish message:', finishMessage);
+  }
+
   const responseParts = [
-    ...(data.candidates?.[0]?.content?.parts || []),
+    ...(candidate?.content?.parts || []),
     ...(data.contents?.[0]?.parts || []),
   ];
   const imagePart = responseParts.find((part: any) => part?.inlineData?.data || part?.inline_data?.data);
@@ -82,7 +96,11 @@ export async function generateImage(
   console.log('Gemini base64 length:', base64.length);
   console.log('Gemini base64 preview:', base64.slice(0, 100));
   if (!base64) {
-    throw new Error('Gemini returned no image data');
+    throw new Error(
+      finishReason
+        ? `Gemini nem adott vissza képet (finishReason: ${finishReason}).`
+        : 'Gemini returned no image data'
+    );
   }
   return base64;
 }
