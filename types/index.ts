@@ -5,6 +5,8 @@ export interface Character {
   traits: string[];
   imagePaths: string[];
   createdAt: number;
+  type?: 'system' | 'user';
+  ownerId?: string | null;
 }
 
 export interface SceneRequest {
