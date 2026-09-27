@@ -134,7 +134,7 @@ export async function GET(request: Request) {
   const base = await sharp(Buffer.from(svg)).png().toBuffer();
 
   const file = characterFileName(searchParams.get('character'));
-  const characterUrl = new URL(`/og/${file}`, request.url);
+  const characterUrl = new URL(`/${file}`, request.url);
 
   try {
     const characterResponse = await fetch(characterUrl, {
@@ -162,7 +162,7 @@ export async function GET(request: Request) {
       .composite([
         {
           input: character,
-            left: 758,
+          left: 758,
           top: 102,
           blend: 'over',
         },
