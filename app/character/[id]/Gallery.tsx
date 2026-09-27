@@ -1,26 +1,22 @@
 import React, { useEffect, useState } from 'react';
 
+interface ImageMeta {
+  characterId?: string;
+  characterIds?: string[];
+  style?: string;
+  camera?: string;
+  aspectRatio?: 'landscape-16-9' | 'portrait-9-16';
+  variant?: 'single' | 'A' | 'B';
+  prompt?: string;
+  creditCost?: number;
+}
+
 interface ImageInfo {
+  id?: string;
   filename: string;
   url: string;
   created: number;
-  meta?: {
-    characterId?: string;
-    characterIds?: string[];
-    duoKey?: string;
-    aliasMap?: Record<string, string>;
-    style?: string;
-    styleIntensity?: number;
-    camera?: string;
-    aspectRatio?: 'landscape-16-9' | 'portrait-9-16';
-    location?: string;
-    mood?: string;
-    locationProfileId?: string;
-    locationFingerprint?: string;
-    shotTemplateId?: string;
-    continuityNotes?: string;
-    variant?: 'single' | 'A' | 'B';
-  } | null;
+  meta?: ImageMeta | null;
 }
 
 interface Props {
@@ -28,21 +24,58 @@ interface Props {
   onUseForAnimation?: (url: string) => void;
 }
 
-export default function Gallery({ characterId, onUseForAnimation }: Props) {
+type Modal = 'info' | 'share' | null;
+
+function Icon({ name }: { name: 'download' | 'play' | 'info' | 'share' | 'close' | 'copy' | 'facebook' | 'instagram' | 'mail' | 'link' }) {
+  const common = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  if (name === 'download') return <svg {...common}><path d="M12 3v11" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></svg>;
+  if (name === 'play') return <svg {...common}><path d="m8 5 11 7-11 7V5Z" /></svg>;
+  if (name === 'info') return <svg {...common}><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></svg>;
+  if (name === 'share') return <svg {...common}><circle cx="18" cy="5" r="2.5" /><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="19" r="2.5" /><path d="m8.2 10.8 7.6-4.2" /><path d="m8.2 13.2 7.6 4.2" /></svg>;
+  if (name === 'close') return <svg {...common}><path d="m6 6 12 12" /><path d="m18 6-12 12" /></svg>;
+  if (name === 'copy') return <svg {...common}><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>;
+  if (name === 'facebook') return <svg {...common}><path d="M14 8h3V4h-3c-3 0-5 2-5 5v3H6v4h3v4h4v-4h3l1-4h-4V9c0-.7.3-1 1-1Z" /></svg>;
+  if (name === 'instagram') return <svg {...common}><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><path d="M17.5 6.5h.01" /></svg>;
+  if (name === 'mail') return <svg {...common}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m4 7 8 6 8-6" /></svg>;
+  return <svg {...common}><path d="M10 13a5 5 0 0 0 7.1.1l1.8-1.8a5 5 0 0 0-7.1-7.1L10.8 5" /><path d="M14 11a5 5 0 0 0-7.1-.1l-1.8 1.8a5 5 0 0 0 7.1 7.1l1-1" /></svg>;
+}
+
+function formatAspectRatio(value?: ImageMeta['aspectRatio']) {
+  if (value === 'portrait-9-16') return 'Álló · 9:16';
+  if (value === 'landscape-16-9') return 'Fekvő · 16:9';
+  return 'Nincs adat';
+}
+
+function formatVariant(value?: ImageMeta['variant']) {
+  if (value === 'A') return 'A variáns';
+  if (value === 'B') return 'B variáns';
+  if (value === 'single') return 'Egy kép';
+  return 'Nincs adat';
+}
+
+function getShareUrl(url: string) {
+  return url;
+}
+
+export default function Gallery({ characterId }: Props) {
   const [images, setImages] = useState<ImageInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [modal, setModal] = useState<Modal>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [shareStatus, setShareStatus] = useState('');
 
   const PAGE_SIZE = 12;
   const totalPages = Math.max(1, Math.ceil(images.length / PAGE_SIZE));
   const pageStart = (currentPage - 1) * PAGE_SIZE;
   const pageImages = images.slice(pageStart, pageStart + PAGE_SIZE);
+  const selectedImage = selectedIndex === null ? null : images[selectedIndex] ?? null;
 
   useEffect(() => {
     fetch(`/api/generated/${characterId}/list`)
-      .then(res => res.json())
-      .then(data => setImages(data.images || []))
+      .then((res) => res.json())
+      .then((data) => setImages(data.images || []))
+      .catch(() => setImages([]))
       .finally(() => setLoading(false));
   }, [characterId]);
 
@@ -55,83 +88,373 @@ export default function Gallery({ characterId, onUseForAnimation }: Props) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        setModal(null);
         setSelectedIndex(null);
         return;
       }
-      if (selectedIndex === null || images.length === 0) return;
+      if (selectedIndex === null || images.length === 0 || modal) return;
       if (event.key === 'ArrowRight') {
         setSelectedIndex((prev) => (prev === null ? 0 : (prev + 1) % images.length));
-        return;
       }
       if (event.key === 'ArrowLeft') {
         setSelectedIndex((prev) => (prev === null ? 0 : (prev - 1 + images.length) % images.length));
       }
     };
+
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selectedIndex, images.length]);
+  }, [selectedIndex, images.length, modal]);
 
-  const selectedImage = selectedIndex === null ? null : images[selectedIndex] ?? null;
+  const closeAll = () => {
+    setModal(null);
+    setSelectedIndex(null);
+    setShareStatus('');
+  };
 
-  if (loading) return <div>Galéria betöltése...</div>;
-  if (!images.length) return <div className="text-gray-500">Még nincs generált kép.</div>;
+  const openShare = (index: number | null = selectedIndex) => {
+    if (index !== null) setSelectedIndex(index);
+    setShareStatus('');
+    setModal('share');
+  };
+
+  const copyLink = async () => {
+    if (!selectedImage) return;
+    try {
+      await navigator.clipboard.writeText(getShareUrl(selectedImage.url));
+      setShareStatus('A link a vágólapra került.');
+    } catch {
+      setShareStatus('A link másolása nem sikerült.');
+    }
+  };
+
+  const shareNative = async () => {
+    if (!selectedImage || !navigator.share) {
+      setShareStatus('Az eszközödön nincs natív megosztás. Használd a Facebook, Instagram, e-mail vagy link gombot.');
+      return;
+    }
+
+    try {
+      let sharedWithFile = false;
+      try {
+        const response = await fetch(selectedImage.url);
+        const blob = await response.blob();
+        const file = new File([blob], selectedImage.filename, { type: blob.type || 'image/jpeg' });
+        if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: 'Generált kép',
+            text: 'Ezt a képet a Vállalhatatlan Illusztrációs Motorral generáltam.',
+            files: [file],
+          });
+          sharedWithFile = true;
+        }
+      } catch {
+        sharedWithFile = false;
+      }
+
+      if (!sharedWithFile) {
+        await navigator.share({
+          title: 'Generált kép',
+          text: 'Ezt a képet a Vállalhatatlan Illusztrációs Motorral generáltam.',
+          url: getShareUrl(selectedImage.url),
+        });
+      }
+
+      setShareStatus('Megosztás elküldve.');
+    } catch (error: any) {
+      if (error?.name !== 'AbortError') setShareStatus('A megosztás nem sikerült.');
+    }
+  };
+
+  const shareFacebook = () => {
+    if (!selectedImage) return;
+    const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(getShareUrl(selectedImage.url))}`;
+    window.open(shareUrl, '_blank', 'noopener,noreferrer,width=760,height=620');
+  };
+
+  const shareInstagram = async () => {
+    if (!selectedImage) return;
+    if (navigator.share) {
+      await shareNative();
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(getShareUrl(selectedImage.url));
+    } catch {}
+    window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer');
+    setShareStatus('A kép linkje a vágólapra került. Mobilon a natív megosztással közvetlenül is küldhető Instagramra.');
+  };
+
+  const shareEmail = () => {
+    if (!selectedImage) return;
+    const subject = encodeURIComponent('Generált kép');
+    const body = encodeURIComponent(`Ezt a képet a Vállalhatatlan Illusztrációs Motorral generáltam.\n\n${getShareUrl(selectedImage.url)}`);
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+  };
+
+  const imageAreaClass = (img: ImageInfo) =>
+    img.meta?.aspectRatio === 'portrait-9-16'
+      ? 'aspect-[9/16]'
+      : 'aspect-[16/9]';
+
+  if (loading) return <div className="py-8 text-sm text-gray-500">Galéria betöltése...</div>;
+  if (!images.length) return <div className="py-8 text-sm text-gray-500">Még nincs generált kép.</div>;
+
+  const renderInfoRows = (img: ImageInfo) => [
+    ['Dátum', new Date(img.created).toLocaleString('hu-HU')],
+    ['Fájl', img.filename],
+    ['Stílus', img.meta?.style || 'Nincs adat'],
+    ['Kamera', img.meta?.camera || 'Nincs adat'],
+    ['Képarány', formatAspectRatio(img.meta?.aspectRatio)],
+    ['Variáns', formatVariant(img.meta?.variant)],
+    ['Kreditköltség', typeof img.meta?.creditCost === 'number' ? String(img.meta.creditCost) : 'Nincs adat'],
+    ['Karakterek', img.meta?.characterIds?.length ? img.meta.characterIds.join(', ') : 'Nincs adat'],
+  ];
 
   return (
     <>
-      <div className="flex items-center justify-between mt-4 mb-2 text-xs text-gray-400">
+      <div className="mt-4 mb-2 flex items-center justify-between text-xs text-gray-400">
         <div>{currentPage}. oldal / {totalPages}</div>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))} disabled={currentPage <= 1} className="px-2 py-1 rounded border border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:border-gray-500">Előző</button>
-          <button type="button" onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))} disabled={currentPage >= totalPages} className="px-2 py-1 rounded border border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:border-gray-500">Következő</button>
+          <button type="button" onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))} disabled={currentPage <= 1} className="rounded border border-gray-700 px-2 py-1 transition hover:border-gray-500 disabled:cursor-not-allowed disabled:opacity-40">Előző</button>
+          <button type="button" onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))} disabled={currentPage >= totalPages} className="rounded border border-gray-700 px-2 py-1 transition hover:border-gray-500 disabled:cursor-not-allowed disabled:opacity-40">Következő</button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8">
-        {pageImages.map((img, index) => (
-          <div key={img.filename} className="bg-gray-800 rounded shadow p-2 flex flex-col items-center">
-            <button type="button" onClick={() => setSelectedIndex(pageStart + index)} className="w-full focus:outline-none focus:ring-2 focus:ring-gray-300 rounded" aria-label="Kép előnézetének megnyitása">
-              <img src={img.url} alt={img.filename} className="rounded mb-2 max-h-48 object-contain w-full" />
-            </button>
-            <div className="text-xs text-gray-400 mb-1">{new Date(img.created).toLocaleString('hu-HU')}</div>
-            {img.meta?.style && <div className="text-[11px] text-gray-300 mb-1">Stílus: {img.meta.style}</div>}
-            {typeof img.meta?.styleIntensity === 'number' && <div className="text-[11px] text-gray-400 mb-1">Intenzitás: {img.meta.styleIntensity}</div>}
-            {img.meta?.camera && <div className="text-[11px] text-gray-500 mb-1">Kamera: {img.meta.camera}</div>}
-            {img.meta?.aspectRatio && <div className="text-[11px] text-gray-500 mb-1">Képarány: {img.meta.aspectRatio}</div>}
-            {img.meta?.locationProfileId && <div className="text-[11px] text-emerald-400/90 mb-1">Helyszínprofil: {img.meta.locationProfileId}</div>}
-            {img.meta?.shotTemplateId && <div className="text-[11px] text-emerald-300/80 mb-1">Beállítás: {img.meta.shotTemplateId}</div>}
-            {img.meta?.locationFingerprint && <div className="text-[11px] text-gray-500 mb-1">Ujjlenyomat: {img.meta.locationFingerprint}</div>}
-            {Array.isArray(img.meta?.characterIds) && img.meta!.characterIds!.length > 1 && <div className="text-[11px] text-gray-500 mb-1">Szereplők: {img.meta!.characterIds!.join(', ')}</div>}
-            <div className="flex items-center gap-2 mt-1">
-              <a href={img.url} download className="text-blue-400 hover:underline text-xs">Letöltés</a>
-              {onUseForAnimation && <button type="button" onClick={() => onUseForAnimation(img.url)} className="text-xs text-indigo-400 hover:text-indigo-300 border border-indigo-700 hover:border-indigo-500 px-2 py-0.5 rounded transition-colors">▶ Animálás</button>}
-            </div>
-          </div>
-        ))}
+      <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+        {pageImages.map((img, index) => {
+          const absoluteIndex = pageStart + index;
+          return (
+            <article key={img.id || img.filename} className="overflow-hidden rounded-xl border border-gray-800 bg-zinc-900/80 shadow-lg">
+              <button
+                type="button"
+                onClick={() => setSelectedIndex(absoluteIndex)}
+                className={`group block w-full ${imageAreaClass(img)} overflow-hidden bg-black focus:outline-none focus:ring-2 focus:ring-white/70`}
+                aria-label="Kép nagy méretű megnyitása"
+              >
+                <img
+                  src={img.url}
+                  alt={img.filename}
+                  className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.01]"
+                />
+              </button>
+
+              <div className="grid grid-cols-2 gap-2 border-t border-gray-800 bg-zinc-950 p-3 sm:grid-cols-4">
+                <a
+                  href={img.url}
+                  download
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-gray-700 px-3 py-2 text-xs font-semibold text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900"
+                >
+                  <Icon name="download" />
+                  <span>Letöltés</span>
+                </a>
+
+                <button
+                  type="button"
+                  disabled
+                  title="Animálás hamarosan elérhető"
+                  className="inline-flex min-h-10 cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-gray-800 px-3 py-2 text-xs font-semibold text-gray-600 opacity-80"
+                >
+                  <Icon name="play" />
+                  <span>Animálás</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedIndex(absoluteIndex);
+                    setModal('info');
+                    setShareStatus('');
+                  }}
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-gray-700 px-3 py-2 text-xs font-semibold text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900"
+                >
+                  <Icon name="info" />
+                  <span>Info</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => openShare(absoluteIndex)}
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-bold text-black shadow-md transition hover:bg-gray-200 hover:shadow-lg"
+                >
+                  <Icon name="share" />
+                  <span>Megosztás</span>
+                </button>
+              </div>
+            </article>
+          );
+        })}
       </div>
 
-      <div className="flex items-center justify-between mt-4 text-xs text-gray-400">
+      <div className="mt-5 flex items-center justify-between text-xs text-gray-400">
         <div>{pageImages.length} / {images.length} kép megjelenítve</div>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))} disabled={currentPage <= 1} className="px-2 py-1 rounded border border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:border-gray-500">Előző</button>
-          <button type="button" onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))} disabled={currentPage >= totalPages} className="px-2 py-1 rounded border border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:border-gray-500">Következő</button>
+          <button type="button" onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))} disabled={currentPage <= 1} className="rounded border border-gray-700 px-2 py-1 transition hover:border-gray-500 disabled:cursor-not-allowed disabled:opacity-40">Előző</button>
+          <button type="button" onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))} disabled={currentPage >= totalPages} className="rounded border border-gray-700 px-2 py-1 transition hover:border-gray-500 disabled:cursor-not-allowed disabled:opacity-40">Következő</button>
         </div>
       </div>
 
-      {selectedImage && (
-        <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4" onClick={() => setSelectedIndex(null)} role="dialog" aria-modal="true" aria-label="Kép előnézete, a bal és jobb nyíllal lehet lépkedni">
-          <div className="relative max-w-6xl w-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
-            <button type="button" onClick={() => setSelectedIndex(null)} className="absolute -top-10 right-0 text-white text-sm bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded">Bezárás</button>
-            <img src={selectedImage.url} alt={selectedImage.filename} className="max-h-[85vh] max-w-full object-contain rounded shadow-2xl" />
-            <div className="text-gray-300 text-xs mt-2">{new Date(selectedImage.created).toLocaleString('hu-HU')}</div>
-            {selectedImage.meta?.style && <div className="text-gray-300 text-xs mt-1">Stílus: {selectedImage.meta.style}</div>}
-            {typeof selectedImage.meta?.styleIntensity === 'number' && <div className="text-gray-400 text-xs mt-1">Intenzitás: {selectedImage.meta.styleIntensity}</div>}
-            {selectedImage.meta?.camera && <div className="text-gray-500 text-xs mt-1">Kamera: {selectedImage.meta.camera}</div>}
-            {selectedImage.meta?.aspectRatio && <div className="text-gray-500 text-xs mt-1">Képarány: {selectedImage.meta.aspectRatio}</div>}
-            {selectedImage.meta?.locationProfileId && <div className="text-emerald-400 text-xs mt-1">Helyszínprofil: {selectedImage.meta.locationProfileId}</div>}
-            {selectedImage.meta?.shotTemplateId && <div className="text-emerald-300 text-xs mt-1">Beállítássablon: {selectedImage.meta.shotTemplateId}</div>}
-            {selectedImage.meta?.locationFingerprint && <div className="text-gray-500 text-xs mt-1">Ujjlenyomat: {selectedImage.meta.locationFingerprint}</div>}
-            {selectedImage.meta?.continuityNotes && <div className="text-gray-400 text-xs mt-1 max-w-2xl text-center">Folytonossági jegyzetek: {selectedImage.meta.continuityNotes}</div>}
-            {Array.isArray(selectedImage.meta?.characterIds) && selectedImage.meta!.characterIds!.length > 1 && <div className="text-gray-500 text-xs mt-1">Szereplők: {selectedImage.meta!.characterIds!.join(', ')}</div>}
+      {selectedImage && modal === 'info' && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          onClick={closeAll}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Kép adatai"
+        >
+          <div className="max-h-[88vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-gray-800 bg-zinc-950 p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.25em] text-gray-600">GENERÁLT KÉP</div>
+                <h3 className="mt-1 text-lg font-bold text-white">Kép adatai</h3>
+              </div>
+              <button type="button" onClick={closeAll} className="rounded-lg border border-gray-700 p-2 text-gray-400 transition hover:border-gray-500 hover:text-white" aria-label="Bezárás">
+                <Icon name="close" />
+              </button>
+            </div>
+
+            <div className="overflow-hidden rounded-xl border border-gray-800">
+              <table className="w-full border-collapse text-sm">
+                <tbody>
+                  {renderInfoRows(selectedImage).map(([label, value]) => (
+                    <tr key={label} className="border-b border-gray-800 last:border-b-0">
+                      <th className="w-40 bg-zinc-900/70 px-4 py-3 text-left font-medium text-gray-500">{label}</th>
+                      <td className="px-4 py-3 text-gray-200 break-words">{value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {selectedImage.meta?.prompt && (
+              <div className="mt-4">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Prompt</div>
+                <div className="max-h-56 overflow-y-auto rounded-xl border border-gray-800 bg-black/40 p-4 text-xs leading-5 text-gray-400 whitespace-pre-wrap">
+                  {selectedImage.meta.prompt}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {selectedImage && modal === 'share' && (
+        <div
+          className="fixed inset-0 z-[75] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          onClick={() => {
+            setModal(null);
+            setShareStatus('');
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Kép megosztása"
+        >
+          <div className="w-full max-w-lg rounded-2xl border border-gray-800 bg-zinc-950 p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.25em] text-gray-600">SHARE</div>
+                <h3 className="mt-1 text-lg font-bold text-white">Megosztás</h3>
+              </div>
+              <button type="button" onClick={() => { setModal(null); setShareStatus(''); }} className="rounded-lg border border-gray-700 p-2 text-gray-400 transition hover:border-gray-500 hover:text-white" aria-label="Bezárás">
+                <Icon name="close" />
+              </button>
+            </div>
+
+            <div className="mb-4 overflow-hidden rounded-xl border border-gray-800 bg-black">
+              <img src={selectedImage.url} alt={selectedImage.filename} className={`mx-auto max-h-72 w-full ${selectedImage.meta?.aspectRatio === 'portrait-9-16' ? 'object-contain' : 'object-contain'}`} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button type="button" onClick={shareFacebook} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-gray-700 bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:border-gray-500 hover:bg-zinc-800">
+                <Icon name="facebook" />
+                Facebook
+              </button>
+              <button type="button" onClick={shareInstagram} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-gray-700 bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:border-gray-500 hover:bg-zinc-800">
+                <Icon name="instagram" />
+                Instagram
+              </button>
+              <button type="button" onClick={shareEmail} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-gray-700 bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:border-gray-500 hover:bg-zinc-800">
+                <Icon name="mail" />
+                E-mail
+              </button>
+              <button type="button" onClick={shareNative} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-black transition hover:bg-gray-200">
+                <Icon name="share" />
+                Eszköz megosztása
+              </button>
+              <button type="button" onClick={copyLink} className="col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-gray-700 px-4 py-3 text-sm font-medium text-gray-300 transition hover:border-gray-500 hover:bg-zinc-900">
+                <Icon name="copy" />
+                Link másolása
+              </button>
+            </div>
+
+            {shareStatus && <div className="mt-4 rounded-lg border border-gray-800 bg-black/30 px-3 py-2 text-xs text-gray-400">{shareStatus}</div>}
+          </div>
+        </div>
+      )}
+
+      {selectedImage && modal === null && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/95 p-3 sm:p-5"
+          onClick={() => setSelectedIndex(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Kép nagy méretű előnézete"
+        >
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              openShare(selectedIndex);
+            }}
+            className="fixed right-4 top-4 z-[62] inline-flex min-h-11 items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-black shadow-2xl transition hover:bg-gray-200 sm:right-6 sm:top-6"
+          >
+            <Icon name="share" />
+            Megosztás
+          </button>
+
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setSelectedIndex(null);
+            }}
+            className="fixed left-4 top-4 z-[62] rounded-xl border border-gray-700 bg-black/80 p-2.5 text-gray-300 transition hover:border-gray-500 hover:text-white sm:left-6 sm:top-6"
+            aria-label="Bezárás"
+          >
+            <Icon name="close" />
+          </button>
+
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setSelectedIndex((prev) => (prev === null ? 0 : (prev - 1 + images.length) % images.length));
+            }}
+            className="fixed left-3 top-1/2 z-[62] hidden -translate-y-1/2 rounded-full border border-gray-700 bg-black/70 p-3 text-white transition hover:border-gray-500 md:block"
+            aria-label="Előző kép"
+          >
+            ‹
+          </button>
+
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setSelectedIndex((prev) => (prev === null ? 0 : (prev + 1) % images.length));
+            }}
+            className="fixed right-3 top-1/2 z-[62] hidden -translate-y-1/2 rounded-full border border-gray-700 bg-black/70 p-3 text-white transition hover:border-gray-500 md:block"
+            aria-label="Következő kép"
+          >
+            ›
+          </button>
+
+          <div className="flex h-full w-full items-center justify-center" onClick={(event) => event.stopPropagation()}>
+            <div className="flex max-h-full max-w-[92vw] items-center justify-center">
+              <img
+                src={selectedImage.url}
+                alt={selectedImage.filename}
+                className="max-h-[calc(100vh-2rem)] max-w-[92vw] rounded-xl object-contain shadow-2xl sm:max-h-[calc(100vh-2.5rem)]"
+              />
+            </div>
           </div>
         </div>
       )}
