@@ -20,21 +20,21 @@ const montserrat = Montserrat({
 
 export const metadata = {
   metadataBase: new URL('https://engine.vallalhatatlan.online'),
-  title: 'Vállalhatatlan Illusztrációs Motor',
+  title: 'VÁLLALHATATLAN // VALÓSÁG MOTOR',
   description: 'Karakteralapú képgenerálás saját karakterekből, saját jelenetekből. Vállalhatatlan vizuális világ, film-noir, analóg és VHS hangulattal.',
   openGraph: {
     type: 'website',
     locale: 'hu_HU',
-    siteName: 'Vállalhatatlan Illusztrációs Motor',
-    title: 'Vállalhatatlan Illusztrációs Motor',
+    siteName: 'VÁLLALHATATLAN // VALÓSÁG MOTOR',
+    title: 'VÁLLALHATATLAN // VALÓSÁG MOTOR',
     description: 'Karakteralapú képgenerálás saját karakterekből, saját jelenetekből.',
     url: 'https://engine.vallalhatatlan.online/',
     images: [
       {
-        url: '/og?v=3',
+        url: '/api/og?variant=landing&v=7',
         width: 1200,
         height: 630,
-        alt: 'Vállalhatatlan Illusztrációs Motor',
+        alt: 'VÁLLALHATATLAN // VALÓSÁG MOTOR',
       },
     ],
   },
@@ -42,7 +42,7 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'Vállalhatatlan Illusztrációs Motor',
     description: 'Karakteralapú képgenerálás saját karakterekből, saját jelenetekből.',
-    images: ['/og?v=3'],
+    images: ['/api/og?variant=landing&v=7'],
   },
 };
 
