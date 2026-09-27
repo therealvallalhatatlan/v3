@@ -69,7 +69,7 @@ export default function HomePage() {
           <div className="grid w-full items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
             <section>
               <div className="mb-5 flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-600">
-                <span>V3 / IMAGE GENERATOR</span>
+                <span>V3 / VALÓSÁG MOTOR</span>
                 <span className="text-zinc-800">///</span>
                 <span>VALLALHATATLAN</span>
               </div>
@@ -81,8 +81,8 @@ export default function HomePage() {
               </h1>
 
               <p className="mt-7 max-w-xl text-base leading-7 text-zinc-400 sm:text-lg">
-                Képgeneráló motor karakterhű vizuális történetekhez. Válassz karaktert, helyszínt,
-                kamerát és stílust, aztán engedd rá a motort.
+                Karakteralapú képgenerálás saját jelenetekhez. Válassz karaktert, helyszínt,
+                kamerát és stílust. Karakter be. Valóság ki.
               </p>
 
               <div className="mt-9 flex flex-wrap items-center gap-3">
@@ -113,7 +113,7 @@ export default function HomePage() {
               <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-3 shadow-2xl">
                 <div className="rounded-xl border border-zinc-800 bg-black p-4">
                   <div className="mb-4 flex items-center justify-between text-[10px] uppercase tracking-[0.25em] text-zinc-600">
-                    <span>ENGINE PREVIEW</span>
+                    <span>VALÓSÁG MOTOR</span>
                     <span>V3.1</span>
                   </div>
 
@@ -122,10 +122,10 @@ export default function HomePage() {
                     <div className="absolute left-5 top-5 text-[9px] tracking-[0.2em] text-zinc-600">CHARACTER / V</div>
                     <div className="absolute bottom-5 left-5 right-5">
                       <div className="text-xs uppercase tracking-[0.2em] text-zinc-600">STYLE</div>
-                      <div className="mt-1 text-sm font-semibold text-zinc-200">Vállalhatatlan / Gritty Underground</div>
+                      <div className="mt-1 text-sm font-semibold text-zinc-200">VÁLLALHATATLAN // VALÓSÁG MOTOR</div>
                       <div className="mt-3 h-px bg-zinc-800" />
                       <div className="mt-3 text-[10px] leading-5 text-zinc-500">
-                        FILM NOIR / VHS / LOW SATURATION / ANALOG GRAIN
+                        KARAKTER • JELENET • STÍLUS • KAMERA
                       </div>
                     </div>
                   </div>
