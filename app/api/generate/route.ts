@@ -220,7 +220,6 @@ export async function POST(req: NextRequest) {
 
     const geminiAspectRatio = aspectRatioKey === 'portrait-9-16' ? '9:16' : '16:9';
     const imageBase64 = await generateImage(prompt, referenceImages, geminiAspectRatio);
-    let imagePath = null;
     if (!imageBase64) throw new Error('Gemini returned no image data');
     const savedA = await saveGeneratedRecord(imageBase64, generationIdA, styleKey, compareStyleKey ? 'A' : 'single', prompt);
     consumedCredits = 1;
