@@ -33,20 +33,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Custom character creation requires purchased credits/character capacity.' }, { status: 403 });
   }
 
-  if ((profile.character_slots ?? 0) <= 0) {
-    return NextResponse.json({ error: 'No character slots available.' }, { status: 403 });
-  }
+  const isAdmin = profile.plan === 'admin';
+  let slotReserved = false;
 
-  const { data: reservedSlot, error: reserveSlotError } = await supabase.rpc('reserve_character_slot', {
-    p_user_id: user.id,
-  });
+  if (!isAdmin) {
+    if ((profile.character_slots ?? 0) <= 0) {
+      return NextResponse.json({ error: 'No character slots available.' }, { status: 403 });
+    }
 
-  if (reserveSlotError) {
-    return NextResponse.json({ error: 'Unable to reserve character slot' }, { status: 500 });
-  }
+    const { data: reservedSlot, error: reserveSlotError } = await supabase.rpc('reserve_character_slot', {
+      p_user_id: user.id,
+    });
 
-  if (!reservedSlot) {
-    return NextResponse.json({ error: 'No character slots available.' }, { status: 403 });
+    if (reserveSlotError) {
+      return NextResponse.json({ error: 'Unable to reserve character slot' }, { status: 500 });
+    }
+
+    if (!reservedSlot) {
+      return NextResponse.json({ error: 'No character slots available.' }, { status: 403 });
+    }
+
+    slotReserved = true;
   }
 
   const data = await req.json();
@@ -76,7 +83,7 @@ export async function POST(req: NextRequest) {
   });
 
   if (error) {
-    await supabase.rpc('refund_character_slot', { p_user_id: user.id });
+    if (slotReserved) await supabase.rpc('refund_character_slot', { p_user_id: user.id });
     console.error('Character insert error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -100,7 +107,7 @@ export async function POST(req: NextRequest) {
     if (imagesError) throw imagesError;
   } catch (mediaError: any) {
     await supabase.from('characters').delete().eq('id', id).eq('owner_id', user.id);
-    await supabase.rpc('refund_character_slot', { p_user_id: user.id });
+    if (slotReserved) await supabase.rpc('refund_character_slot', { p_user_id: user.id });
     return NextResponse.json({ error: mediaError?.message || 'Failed to store reference images' }, { status: 500 });
   }
 
@@ -136,7 +143,8 @@ export async function DELETE(req: NextRequest) {
   const { error } = await supabase.from('characters').delete().eq('id', id).eq('owner_id', user.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  await supabase.rpc('refund_character_slot', { p_user_id: user.id });
+  const { data: ownerProfile } = await supabase.from('profiles').select('plan').eq('id', user.id).maybeSingle();
+  if (ownerProfile?.plan !== 'admin') await supabase.rpc('refund_character_slot', { p_user_id: user.id });
 
   try {
     deleteCharacter(id);
