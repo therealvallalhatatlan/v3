@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient, getCurrentUser } from '../../../lib/supabase/server';
+import { uploadDataUrl } from '../../../lib/supabase/media';
 import { deleteCharacter, saveCharacter, getAllCharacters } from '../../../lib/storage';
 import { Character } from '../../../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -86,6 +87,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  try {
+    const referencePaths: string[] = [];
+    for (let index = 0; index < character.imagePaths.length; index += 1) {
+      const storagePath = `${user.id}/characters/${id}/references/${index + 1}-reference.png`;
+      await uploadDataUrl(storagePath, character.imagePaths[index]);
+      referencePaths.push(storagePath);
+    }
+
+    const { error: imagesError } = await supabase.from('character_images').insert(
+      referencePaths.map((storagePath) => ({
+        character_id: id,
+        storage_path: storagePath,
+        image_type: 'reference',
+      }))
+    );
+
+    if (imagesError) throw imagesError;
+  } catch (mediaError: any) {
+    await supabase.from('characters').delete().eq('id', id).eq('owner_id', user.id);
+    return NextResponse.json({ error: mediaError?.message || 'Failed to store reference images' }, { status: 500 });
+  }
+
   const { error: slotError } = await supabase
     .from('profiles')
     .update({
@@ -99,13 +122,7 @@ export async function POST(req: NextRequest) {
     console.error('Character slot update error:', slotError);
   }
 
-  // Legacy save retained temporarily for local migration compatibility.
-  try {
-    saveCharacter(character);
-  } catch {
-    // Database is the source of truth.
-  }
-
+  // Legacy local persistence is intentionally no longer used as source of truth.
   return NextResponse.json({ ...character, ownerId: user.id, type: 'user' }, { status: 201 });
 }
 
