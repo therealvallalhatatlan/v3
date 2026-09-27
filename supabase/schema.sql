@@ -29,6 +29,18 @@ create table if not exists public.character_images (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.generation_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  status text not null check (status in ('success','failed')),
+  provider text not null default 'gemini',
+  credits integer not null default 0,
+  metadata jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists generation_events_user_id_idx on public.generation_events(user_id);
+
 create table if not exists public.generated_images (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references public.profiles(id) on delete cascade,
@@ -76,6 +88,7 @@ create index if not exists purchases_user_id_idx on public.purchases(user_id);
 alter table public.profiles enable row level security;
 alter table public.characters enable row level security;
 alter table public.character_images enable row level security;
+alter table public.generation_events enable row level security;
 alter table public.generated_images enable row level security;
 alter table public.credit_transactions enable row level security;
 alter table public.purchases enable row level security;
@@ -109,6 +122,10 @@ create policy "owned_character_images_select" on public.character_images
       where c.id = character_id and (c.type = 'system' or c.owner_id = auth.uid())
     )
   );
+
+drop policy if exists "own_generation_events_select" on public.generation_events;
+create policy "own_generation_events_select" on public.generation_events
+  for select using (user_id = auth.uid());
 
 drop policy if exists "owned_generated_images_select" on public.generated_images;
 create policy "owned_generated_images_select" on public.generated_images
