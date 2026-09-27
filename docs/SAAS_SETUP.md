@@ -68,7 +68,7 @@ Stripe credit packages are intentionally not activated yet.
 
 ## 6. Stripe credit purchases
 
-The app uses Stripe Checkout for one-time credit purchases. Stripe Checkout provides the hosted payment page, and fulfillment is handled from the webhook rather than the browser redirect. citeturn407072view0turn407072view1
+The app uses Stripe Checkout for one-time credit purchases. Stripe Checkout provides the hosted payment page, and fulfillment is handled from the webhook rather than the browser redirect.
 
 Set these Vercel environment variables:
 
@@ -86,7 +86,7 @@ Register this webhook endpoint in Stripe:
 
 `https://YOUR-DOMAIN/api/stripe/webhook`
 
-The webhook handles `checkout.session.completed` and asynchronous payment success events, verifies the Stripe signature, and applies the purchase once. Stripe recommends signature verification and webhook-driven fulfillment for these flows. citeturn407072view1
+The webhook handles `checkout.session.completed` and asynchronous payment success events, verifies the Stripe signature, and applies the purchase once.
 
 The purchase page is:
 
