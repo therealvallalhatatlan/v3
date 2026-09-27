@@ -64,19 +64,23 @@ function migrateBuiltins(): PresetRecord[] {
   const builtins = BUILTIN_PRESETS.map((builtin) => {
     const identity = `${builtin.type}:${builtin.key}`;
     const previous = existingByKey.get(identity);
+    const customizedPrompt = Boolean(previous && previous.prompt && previous.prompt !== previous.defaultPrompt);
+    const customizedNegative = Boolean(previous && previous.negative !== previous.defaultNegative);
+    const customizedLabel = Boolean(previous && previous.label && previous.label !== previous.defaultLabel);
+
     return {
       id: previous?.id || `builtin-${builtin.type}-${builtin.key || 'empty'}`,
       type: builtin.type,
       key: builtin.key,
-      label: previous?.label || builtin.label,
-      prompt: previous?.prompt ?? builtin.prompt,
-      negative: previous?.negative ?? builtin.negative,
+      label: customizedLabel ? previous!.label : builtin.label,
+      prompt: customizedPrompt ? previous!.prompt : builtin.prompt,
+      negative: customizedNegative ? previous!.negative : builtin.negative,
       builtin: true,
       defaultLabel: builtin.label,
       defaultPrompt: builtin.prompt,
       defaultNegative: builtin.negative,
       createdAt: previous?.createdAt || now,
-      updatedAt: previous?.updatedAt || now,
+      updatedAt: previous ? (customizedPrompt || customizedNegative || customizedLabel ? previous.updatedAt : now) : now,
     } satisfies PresetRecord;
   });
 
