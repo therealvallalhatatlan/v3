@@ -1,105 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getStoragePath } from '../../../../../lib/paths';
-import fs from 'fs';
-import path from 'path';
-
-const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif']);
-
-type ImageMeta = {
-  characterId?: string;
-  characterIds?: string[];
-  duoKey?: string;
-  aliasMap?: Record<string, string>;
-  style?: string;
-  styleIntensity?: number;
-  camera?: string;
-  aspectRatio?: 'landscape-16-9' | 'portrait-9-16';
-  location?: string;
-  mood?: string;
-  locationProfileId?: string;
-  locationFingerprint?: string;
-  shotTemplateId?: string;
-  continuityNotes?: string;
-  variant?: 'single' | 'A' | 'B';
-  createdAt?: number;
-};
+import { createSupabaseServerClient, getCurrentUser } from '../../../../../lib/supabase/server';
+import { createSignedMediaUrl } from '../../../../../lib/supabase/media';
 
 export async function GET(req: NextRequest, { params }: { params: { characterId: string } }) {
-  const { characterId } = params;
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+
+  const characterId = String(params.characterId || '').trim();
   const duoWith = req.nextUrl.searchParams.get('duoWith')?.trim();
+
   if (!characterId) {
     return NextResponse.json({ error: 'Missing characterId' }, { status: 400 });
   }
 
-  const rootPath = getStoragePath('generated');
-  const requestedSet = new Set([characterId, ...(duoWith ? [duoWith] : [])]);
-  const imageMap = new Map<string, {
-    filename: string;
-    url: string;
-    created: number;
-    meta: ImageMeta | null;
-  }>();
+  const supabase = await createSupabaseServerClient();
 
-  const collectImagesFromDir = (folderId: string) => {
-    const dirPath = getStoragePath('generated', folderId);
-    if (!fs.existsSync(dirPath)) return;
+  let query = supabase
+    .from('generated_images')
+    .select('id, owner_id, character_id, character_ids, storage_path, prompt, style, camera, aspect_ratio, variant, credit_cost, created_at')
+    .eq('owner_id', user.id)
+    .order('created_at', { ascending: false });
 
-    const entries = fs.readdirSync(dirPath).filter((name) => IMAGE_EXTENSIONS.has(path.extname(name).toLowerCase()));
-    for (const fileName of entries) {
-      const filePath = path.join(dirPath, fileName);
-      const created = fs.statSync(filePath).birthtimeMs;
-      const parsed = path.parse(filePath);
-      const metaFilePath = path.join(parsed.dir, `${parsed.name}.json`);
-      let meta: ImageMeta | null = null;
+  const { data, error } = await query;
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-      if (fs.existsSync(metaFilePath)) {
-        try {
-          const raw = fs.readFileSync(metaFilePath, 'utf-8');
-          meta = JSON.parse(raw) as ImageMeta;
-        } catch {
-          meta = null;
-        }
-      }
+  const matches = (data || []).filter((image) => {
+    const ids = Array.isArray(image.character_ids) ? image.character_ids.map(String) : [];
+    const primaryMatch = String(image.character_id) === characterId || ids.includes(characterId);
+    if (!primaryMatch) return false;
+    if (duoWith) return ids.includes(duoWith);
+    return true;
+  });
 
-      const metaCharacterIds = new Set((meta?.characterIds || []).map((id) => String(id)));
-      const includeByMeta = metaCharacterIds.has(characterId)
-        && (!duoWith || metaCharacterIds.has(duoWith));
-      const includeByFolder = folderId === characterId;
-
-      if (!includeByMeta && !includeByFolder) {
-        continue;
-      }
-
-      const url = `/api/generated/${folderId}/${fileName}`;
-      const dedupeKey = `${meta?.duoKey || 'single'}::${fileName}`;
-      const existing = imageMap.get(dedupeKey);
-
-      if (!existing || created > existing.created) {
-        imageMap.set(dedupeKey, {
-          filename: fileName,
-          url,
-          created,
-          meta,
-        });
-      }
-    }
-  };
-
-  collectImagesFromDir(characterId);
-
-  if (fs.existsSync(rootPath)) {
-    const allFolders = fs.readdirSync(rootPath).filter((name) => {
-      const full = path.join(rootPath, name);
-      return fs.statSync(full).isDirectory();
-    });
-
-    for (const folderId of allFolders) {
-      if (requestedSet.has(folderId)) continue;
-      if (!folderId.startsWith('duo--')) continue;
-      collectImagesFromDir(folderId);
+  const images = [];
+  for (const image of matches) {
+    try {
+      images.push({
+        filename: image.storage_path.split('/').pop() || image.id,
+        url: await createSignedMediaUrl(image.storage_path, 3600),
+        created: new Date(image.created_at).getTime(),
+        meta: {
+          characterId: image.character_id,
+          characterIds: Array.isArray(image.character_ids) ? image.character_ids : [],
+          style: image.style,
+          camera: image.camera,
+          aspectRatio: image.aspect_ratio,
+          variant: image.variant,
+          prompt: image.prompt,
+        },
+      });
+    } catch (signError) {
+      console.error('Unable to sign generated image:', image.storage_path, signError);
     }
   }
 
-  const files = Array.from(imageMap.values()).sort((a, b) => b.created - a.created);
-  return NextResponse.json({ images: files });
+  return NextResponse.json({ images });
 }
