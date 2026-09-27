@@ -128,6 +128,16 @@ create policy "owned_characters_delete" on public.characters for delete using (t
 drop policy if exists "owned_character_images_select" on public.character_images;
 create policy "owned_character_images_select" on public.character_images for select using (exists (select 1 from public.characters c where c.id = character_id and (c.type = 'system' or c.owner_id = auth.uid())));
 
+drop policy if exists "owned_character_images_insert" on public.character_images;
+create policy "owned_character_images_insert" on public.character_images for insert with check (
+  exists (select 1 from public.characters c where c.id = character_id and c.type = 'user' and c.owner_id = auth.uid())
+);
+
+drop policy if exists "owned_character_images_delete" on public.character_images;
+create policy "owned_character_images_delete" on public.character_images for delete using (
+  exists (select 1 from public.characters c where c.id = character_id and c.type = 'user' and c.owner_id = auth.uid())
+);
+
 drop policy if exists "own_generation_events_select" on public.generation_events;
 create policy "own_generation_events_select" on public.generation_events for select using (user_id = auth.uid());
 
