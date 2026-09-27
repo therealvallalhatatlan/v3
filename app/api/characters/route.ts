@@ -76,6 +76,7 @@ export async function POST(req: NextRequest) {
   });
 
   if (error) {
+    await supabase.rpc('refund_character_slot', { p_user_id: user.id });
     console.error('Character insert error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -134,6 +135,8 @@ export async function DELETE(req: NextRequest) {
 
   const { error } = await supabase.from('characters').delete().eq('id', id).eq('owner_id', user.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  await supabase.rpc('refund_character_slot', { p_user_id: user.id });
 
   try {
     deleteCharacter(id);
