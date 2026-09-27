@@ -40,7 +40,7 @@ export const metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Vállalhatatlan Illusztrációs Motor',
+    title: 'VÁLLALHATATLAN // VALÓSÁG MOTOR',
     description: 'Karakteralapú képgenerálás saját karakterekből, saját jelenetekből.',
     images: ['/api/og?variant=landing&v=7'],
   },
