@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { createSupabaseBrowserClient } from '../../lib/supabase/client';
 
 type Account = {
   authenticated: boolean;
@@ -22,6 +23,12 @@ export default function TopNav() {
   }, []);
 
   const isPaid = account?.plan === 'paid' || account?.plan === 'admin';
+
+  const handleSignOut = async () => {
+    const supabase = createSupabaseBrowserClient();
+    await supabase.auth.signOut();
+    window.location.href = '/';
+  };
 
   const items = [
     { href: '/', label: 'Karakterek' },
@@ -57,6 +64,15 @@ export default function TopNav() {
             );
           })}
         </nav>
+
+        {account?.authenticated && (
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs text-gray-500">{account.generationCredits ?? 0} kredit</span>
+            <button type="button" onClick={handleSignOut} className="rounded-lg border border-gray-800 px-3 py-2 text-xs text-gray-400 hover:bg-gray-900 hover:text-white">
+              Kilépés
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );
