@@ -55,7 +55,7 @@ export default function HomePage() {
   };
 
   if (loading) {
-    return <main className="min-h-screen bg-black text-zinc-100 font-mono p-8">Betöltés…</main>;
+    return <main className="min-h-screen bg-black text-zinc-100 font-mono p-8">ffffffffffffffffff…</main>;
   }
 
   if (!account?.authenticated) {
@@ -149,7 +149,7 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-black text-zinc-100 font-mono flex flex-col items-center max-w-7xl mx-auto px-6 mt-6">
-      <div className="w-full max-w-7xl">
+      <div className="w-full max-w-6xl">
         <div className="flex flex-col md:flex-row md:justify-between md:items-end mb-8 gap-4">
           <div>
             <div className="text-xs tracking-[0.25em] text-zinc-500 mb-2">IMAGE GENERATOR</div>
