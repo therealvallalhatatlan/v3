@@ -11,11 +11,26 @@ type Package = {
   amountHuf: number;
 };
 
+type PurchaseStatus = {
+  fulfilled: boolean;
+  paymentStatus: string | null;
+  purchase: {
+    package_id: string;
+    credits: number;
+    character_slots: number;
+    amount: number;
+    currency: string;
+    status: string;
+  } | null;
+};
+
 export default function CreditsPage() {
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [purchaseMessage, setPurchaseMessage] = useState('');
+  const [purchaseChecking, setPurchaseChecking] = useState(false);
 
   useEffect(() => {
     fetch('/api/credits/packages')
@@ -25,9 +40,80 @@ export default function CreditsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+    const success = params.get('success');
+    const canceled = params.get('canceled');
+
+    if (canceled === '1') {
+      setPurchaseMessage('A fizetést megszakítottad. Nem történt kreditjóváírás.');
+      window.history.replaceState({}, '', '/credits');
+      return;
+    }
+
+    if (success !== '1' || !sessionId) return;
+
+    let cancelled = false;
+    let attempts = 0;
+    setPurchaseChecking(true);
+    setPurchaseMessage('Fizetés sikeres. A kreditek jóváírását ellenőrizzük…');
+
+    const check = async () => {
+      try {
+        const res = await fetch('/api/credits/status?session_id=' + encodeURIComponent(sessionId), {
+          cache: 'no-store',
+        });
+        const data = (await res.json()) as PurchaseStatus | { error?: string };
+
+        if (cancelled) return;
+
+        if (!res.ok) {
+          throw new Error(('error' in data && data.error) || 'Nem sikerült ellenőrizni a fizetés állapotát.');
+        }
+
+        const status = data as PurchaseStatus;
+
+        if (status.fulfilled) {
+          const purchase = status.purchase;
+          setPurchaseMessage(
+            purchase
+              ? `Kész. +${purchase.credits} kredit${purchase.character_slots ? ` és +${purchase.character_slots} karakterhely` : ''} jóváírva.`
+              : 'Kész. A vásárlás jóváírva.'
+          );
+          setPurchaseChecking(false);
+          window.history.replaceState({}, '', '/credits');
+          return;
+        }
+
+        attempts += 1;
+        if (attempts >= 8) {
+          setPurchaseMessage('A fizetés megtörtént, a jóváírás még feldolgozás alatt van. Frissíts később, ha még nem jelent meg.');
+          setPurchaseChecking(false);
+          window.history.replaceState({}, '', '/credits');
+          return;
+        }
+
+        window.setTimeout(check, 1500);
+      } catch (e: any) {
+        if (cancelled) return;
+        setPurchaseMessage(e?.message || 'A fizetés állapotát nem sikerült ellenőrizni.');
+        setPurchaseChecking(false);
+        window.history.replaceState({}, '', '/credits');
+      }
+    };
+
+    void check();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const buy = async (packageId: string) => {
     setBuying(packageId);
     setError('');
+    setPurchaseMessage('');
     try {
       const res = await fetch('/api/credits/checkout', {
         method: 'POST',
@@ -51,6 +137,13 @@ export default function CreditsPage() {
           <h1 className="text-3xl font-bold">Kreditek</h1>
           <p className="text-sm text-zinc-500 mt-2">Vásárolj kreditcsomagot, és használd fel képgenerálásra vagy karakterkapacitásra.</p>
         </div>
+
+        {purchaseMessage && (
+          <div className="mb-5 rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-300">
+            {purchaseMessage}
+            {purchaseChecking && <span className="ml-2 text-zinc-500">●</span>}
+          </div>
+        )}
 
         {loading && <div className="text-zinc-500">Betöltés…</div>}
 
