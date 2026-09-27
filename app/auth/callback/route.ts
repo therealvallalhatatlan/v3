@@ -46,8 +46,11 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     const url = new URL('/auth', requestUrl.origin);
+    const message = error.message.toLowerCase().includes('pkce') || error.message.toLowerCase().includes('code verifier')
+      ? 'A belépési link elveszett útközben. Kérj egy új linket, és ugyanabban a böngészőben nyisd meg, ahol a belépést elindítottad. Ne nyisd meg másik eszközön vagy másik böngészőben.'
+      : 'Nem sikerült befejezni a belépést. Kérj egy új belépési linket, majd próbáld meg újra.';
     url.searchParams.set('error', 'auth_callback_failed');
-    url.searchParams.set('message', error.message);
+    url.searchParams.set('message', message);
     if (safeNext !== '/') url.searchParams.set('next', safeNext);
     return NextResponse.redirect(url);
   }
