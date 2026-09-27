@@ -202,10 +202,54 @@ create or replace function public.refund_generation_credits(p_user_id uuid, p_co
 returns boolean language plpgsql security definer set search_path = public
 as $$
 begin
+  if auth.uid() is null or auth.uid() <> p_user_id then return false; end if;
   if p_cost <= 0 then return false; end if;
   update public.profiles set generation_credits = generation_credits + p_cost, updated_at = now() where id = p_user_id;
   if not found then return false; end if;
   insert into public.credit_transactions (user_id, type, amount, reference) values (p_user_id, 'refund', p_cost, p_reference);
   return true;
+end;
+$$;
+
+
+create or replace function public.reserve_character_slot(p_user_id uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare affected integer;
+begin
+  if auth.uid() is null or auth.uid() <> p_user_id then return false; end if;
+
+  update public.profiles
+  set character_slots = character_slots - 1,
+      updated_at = now()
+  where id = p_user_id
+    and plan in ('paid','admin')
+    and character_slots > 0;
+
+  get diagnostics affected = row_count;
+  if affected <> 1 then return false; end if;
+
+  return true;
+end;
+$$;
+
+create or replace function public.refund_character_slot(p_user_id uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null or auth.uid() <> p_user_id then return false; end if;
+
+  update public.profiles
+  set character_slots = character_slots + 1,
+      updated_at = now()
+  where id = p_user_id;
+
+  return found;
 end;
 $$;
