@@ -16,6 +16,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Credit package not found' }, { status: 404 });
     }
 
+    console.log('Stripe checkout package:', {
+      id: pack.id,
+      name: pack.name,
+      credits: pack.credits,
+      characterSlots: pack.characterSlots,
+      amountHuf: pack.amountHuf,
+    });
+
+    if (!Number.isInteger(pack.amountHuf) || pack.amountHuf < 175) {
+      return NextResponse.json(
+        { error: 'Invalid package amount', packageId: pack.id, configuredAmountHuf: pack.amountHuf },
+        { status: 500 }
+      );
+    }
+
     const stripe = getStripe();
     const origin = req.nextUrl.origin;
 
