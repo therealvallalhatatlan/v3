@@ -1,26 +1,42 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { createSupabaseBrowserClient } from '../../lib/supabase/client';
 
 export default function AuthPage() {
   const supabase = createSupabaseBrowserClient();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const callbackError = searchParams.get('error');
+    const message = searchParams.get('message');
+
+    if (callbackError) {
+      setError(message || callbackError);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setLoading(true);
     setError('');
 
+    const next = searchParams.get('next');
+    const callbackUrl = new URL('/auth/callback', window.location.origin);
+
+    if (next && next.startsWith('/')) {
+      callbackUrl.searchParams.set('next', next);
+    }
+
     const { error: signInError } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: {
-        emailRedirectTo: typeof window !== 'undefined'
-          ? `${window.location.origin}/auth/callback`
-          : undefined,
+        emailRedirectTo: callbackUrl.toString(),
       },
     });
 
@@ -60,7 +76,11 @@ export default function AuthPage() {
               placeholder="te@email.hu"
             />
 
-            {error && <div className="mt-3 text-sm text-red-400">{error}</div>}
+            {error && (
+              <div className="mt-3 rounded-xl border border-red-900/50 bg-red-950/30 p-3 text-sm text-red-300">
+                {error}
+              </div>
+            )}
 
             <button
               type="submit"
