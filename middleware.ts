@@ -31,8 +31,7 @@ export async function middleware(request: NextRequest) {
 
   const isProtectedPage =
     pathname.startsWith('/character') ||
-    pathname.startsWith('/presets') ||
-    false;
+    pathname.startsWith('/presets');
 
   const isProtectedApi =
     pathname.startsWith('/api/generate') ||
