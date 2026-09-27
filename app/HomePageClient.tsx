@@ -116,14 +116,20 @@ export default function HomePage() {
                     <span>V3.1</span>
                   </div>
 
-                  <div className="relative aspect-[4/5] overflow-hidden rounded-lg border border-zinc-900 bg-gradient-to-br from-zinc-900 via-black to-zinc-950">
-                    <div className="absolute inset-0 opacity-25" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)', backgroundSize: '100% 10px' }} />
-                    <div className="absolute left-5 top-5 text-[9px] tracking-[0.2em] text-zinc-600">CHARACTER / V</div>
+                  <div className="relative aspect-[4/5] overflow-hidden rounded-lg border border-zinc-900 bg-black">
+                    <img
+                      src="/malac.jpg"
+                      alt="Vállalhatatlan / Valóság Motor"
+                      className="absolute inset-0 h-full w-full object-cover object-center"
+                    />
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/20" />
+                    <div className="pointer-events-none absolute inset-0 opacity-20" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px)', backgroundSize: '100% 10px' }} />
+                    <div className="absolute left-5 top-5 text-[9px] tracking-[0.2em] text-zinc-300/70">CHARACTER / V</div>
                     <div className="absolute bottom-5 left-5 right-5">
-                      <div className="text-xs uppercase tracking-[0.2em] text-zinc-600">STYLE</div>
-                      <div className="mt-1 text-sm font-semibold text-zinc-200">VÁLLALHATATLAN // VALÓSÁG MOTOR</div>
-                      <div className="mt-3 h-px bg-zinc-800" />
-                      <div className="mt-3 text-[10px] leading-5 text-zinc-500">
+                      <div className="text-xs uppercase tracking-[0.2em] text-zinc-300/60">VALÓSÁG MOTOR</div>
+                      <div className="mt-1 text-sm font-semibold text-white">VÁLLALHATATLAN // VALÓSÁG MOTOR</div>
+                      <div className="mt-3 h-px bg-white/20" />
+                      <div className="mt-3 text-[10px] leading-5 text-zinc-200/60">
                         KARAKTER • JELENET • STÍLUS • KAMERA
                       </div>
                     </div>
