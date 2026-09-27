@@ -1,5 +1,7 @@
 'use client';
 
+import LoadingScreen from '../../../components/LoadingScreen';
+
 import { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -490,7 +492,7 @@ export default function CharacterDetailPage() {
 
   const locationPresetCount = useMemo(() => locationPresetOptions.length, [locationPresetOptions]);
   const isPaid = userPlan === 'paid' || userPlan === 'admin';
-  if (!character) return <main className="min-h-screen bg-black text-gray-100 font-mono flex items-center justify-center">Loading...</main>;
+  if (!character) return <LoadingScreen />;
 
   return (
     <main className="min-h-screen bg-black text-gray-100 font-mono flex flex-col items-center mt-6">
