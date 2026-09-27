@@ -34,7 +34,7 @@ export default function TopNav() {
     { href: '/', label: 'Karakterek' },
     ...(isPaid ? [{ href: '/character/new', label: 'Karakter létrehozása' }] : []),
     { href: '/credits', label: 'Kreditek' },
-    ...(isPaid ? [{ href: '/presets', label: 'Presetek' }] : []),
+    { href: '/presets', label: 'Presetek' },
   ];
 
   return (
