@@ -15,7 +15,7 @@ export const metadata = {
     url: 'https://engine.vallalhatatlan.online/',
     images: [
       {
-        url: '/api/og?variant=landing&v=7',
+        url: '/api/og?variant=landing&character=character.png&v=8',
         width: 1200,
         height: 630,
         type: 'image/png',
@@ -27,7 +27,7 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'VÁLLALHATATLAN // VALÓSÁG MOTOR',
     description: 'Karakterekből jelenetek. Karakterhű képgenerálás analóg, noir és VHS hangulattal.',
-    images: ['/api/og?variant=landing&v=7'],
+    images: ['/api/og?variant=landing&character=character.png&v=8'],
   },
 };
 
