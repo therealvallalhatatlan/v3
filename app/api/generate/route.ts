@@ -115,10 +115,23 @@ export async function POST(req: NextRequest) {
     const requestedStyle = String(style || '').trim();
     const styleKey = getPreset('style', requestedStyle) ? requestedStyle : 'gritty';
     const requestedCompareStyle = String(compareStyle || '').trim();
-    const compareStyleKey = getPreset('style', requestedCompareStyle) ? requestedCompareStyle : null;
+    const requestedCompareStyleKey = getPreset('style', requestedCompareStyle) ? requestedCompareStyle : null;
     const aspectRatioKey = ALLOWED_ASPECT_RATIOS.includes(aspectRatio as AspectRatio16x9) ? aspectRatio as AspectRatio16x9 : 'landscape-16-9';
-    const intensity = clampIntensity(styleIntensity);
-    const normalizedScenePackage = normalizeScenePackage(scenePackage);
+
+    const supabase = await createSupabaseServerClient();
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('plan, generation_credits')
+      .eq('id', currentUserId)
+      .maybeSingle();
+    if (profileError) return NextResponse.json({ error: 'Unable to load user profile' }, { status: 500 });
+    if (!profile) return NextResponse.json({ error: 'User profile not initialized' }, { status: 403 });
+
+    const isPaid = profile.plan === 'paid' || profile.plan === 'admin';
+    const compareStyleKey = isPaid ? requestedCompareStyleKey : null;
+    const intensity = isPaid ? clampIntensity(styleIntensity) : 65;
+    const normalizedScenePackage = isPaid ? normalizeScenePackage(scenePackage) : undefined;
+    const cameraKeyForUser = isPaid ? cameraKey : 'wide';
     const resolvedLocation = resolveLocationText(location, normalizedScenePackage);
 
     const castAliases = charactersForGeneration.map((character, index) => {
@@ -137,7 +150,7 @@ export async function POST(req: NextRequest) {
       aspectRatio: aspectRatioKey,
       style: styleKey,
       styleIntensity: intensity,
-      camera: cameraKey,
+      camera: cameraKeyForUser,
     };
 
     const locationFingerprintSource = normalizedScenePackage
@@ -153,21 +166,6 @@ export async function POST(req: NextRequest) {
     const isMultiCharacter = characterDNAList.length > 1;
     const isCompare = Boolean(compareStyleKey);
     const creditCost = isCompare ? 2 : 1;
-
-    const supabase = await createSupabaseServerClient();
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('plan, generation_credits')
-      .eq('id', currentUserId)
-      .maybeSingle();
-
-    if (profileError) {
-      return NextResponse.json({ error: 'Unable to load credit balance' }, { status: 500 });
-    }
-
-    if (!profile) {
-      return NextResponse.json({ error: 'User profile not initialized' }, { status: 403 });
-    }
 
     if ((profile.generation_credits ?? 0) < creditCost) {
       return NextResponse.json({ error: 'Not enough credits', requiredCredits: creditCost, availableCredits: profile.generation_credits ?? 0 }, { status: 402 });
@@ -209,7 +207,7 @@ export async function POST(req: NextRequest) {
         storage_path: storagePath,
         prompt: recordPrompt,
         style: recordStyle,
-        camera: cameraKey,
+        camera: cameraKeyForUser,
         aspect_ratio: aspectRatioKey,
         variant: recordVariant,
         credit_cost: 1,
