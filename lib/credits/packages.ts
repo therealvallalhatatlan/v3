@@ -6,7 +6,7 @@ export type CreditPackage = {
   amountHuf: number;
 };
 
-const FALLBACK_PACKAGES: CreditPackage[] = [
+const DEFAULT_PACKAGES: CreditPackage[] = [
   { id: 'starter', name: 'Starter', credits: 30, characterSlots: 0, amountHuf: 2490 },
   { id: 'creator', name: 'Creator', credits: 75, characterSlots: 1, amountHuf: 4990 },
   { id: 'studio', name: 'Studio', credits: 200, characterSlots: 2, amountHuf: 9990 },
@@ -14,15 +14,17 @@ const FALLBACK_PACKAGES: CreditPackage[] = [
   { id: 'big', name: 'Big', credits: 1000, characterSlots: 10, amountHuf: 34990 },
 ];
 
+const MIN_STRIPE_AMOUNT_HUF = 175;
+
 export function getCreditPackages(): CreditPackage[] {
   const raw = process.env.CREDIT_PACKAGES_JSON;
-  if (!raw) return FALLBACK_PACKAGES;
+  if (!raw) return DEFAULT_PACKAGES;
 
   try {
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return FALLBACK_PACKAGES;
+    if (!Array.isArray(parsed)) return DEFAULT_PACKAGES;
 
-    return parsed
+    const parsedPackages = parsed
       .map((item) => ({
         id: String(item?.id || '').trim(),
         name: String(item?.name || '').trim(),
@@ -38,9 +40,15 @@ export function getCreditPackages(): CreditPackage[] {
         Number.isInteger(item.characterSlots) &&
         item.characterSlots >= 0 &&
         Number.isInteger(item.amountHuf) &&
-        item.amountHuf > 0
+        item.amountHuf >= MIN_STRIPE_AMOUNT_HUF
       );
+
+    if (parsedPackages.length === parsed.length) return parsedPackages;
+
+    const parsedById = new Map(parsedPackages.map((item) => [item.id, item]));
+
+    return DEFAULT_PACKAGES.map((fallback) => parsedById.get(fallback.id) || fallback);
   } catch {
-    return FALLBACK_PACKAGES;
+    return DEFAULT_PACKAGES;
   }
 }
