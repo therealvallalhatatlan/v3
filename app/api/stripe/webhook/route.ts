@@ -39,8 +39,9 @@ export async function POST(request: NextRequest) {
   const packageId = String(session.metadata?.packageId || '').trim();
   const credits = Number(session.metadata?.credits || 0);
   const characterSlots = Number(session.metadata?.characterSlots || 0);
+  const amountHuf = Number(session.metadata?.amountHuf || 0);
 
-  if (!userId || !packageId || !Number.isInteger(credits) || credits <= 0 || !Number.isInteger(characterSlots) || characterSlots < 0) {
+  if (!userId || !packageId || !Number.isInteger(credits) || credits <= 0 || !Number.isInteger(characterSlots) || characterSlots < 0 || !Number.isInteger(amountHuf) || amountHuf <= 0) {
     return NextResponse.json({ error: 'Invalid checkout metadata' }, { status: 400 });
   }
 
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
     p_package_id: packageId,
     p_credits: credits,
     p_character_slots: characterSlots,
-    p_amount: Number(session.amount_total || 0),
+    p_amount: amountHuf,
     p_currency: String(session.currency || 'huf'),
   });
 
