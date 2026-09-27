@@ -1,5 +1,7 @@
 'use client';
 
+import LoadingScreen from '../components/LoadingScreen';
+
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
@@ -145,7 +147,7 @@ export default function CreditsPage() {
           </div>
         )}
 
-        {loading && <div className="text-zinc-500">Betöltés…</div>}
+        {loading && <LoadingScreen />}
 
         {!loading && packages.length === 0 && (
           <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-6 text-sm text-zinc-500">
