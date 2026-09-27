@@ -35,15 +35,15 @@ export async function GET(request: Request) {
 
   const title = safeText(
     searchParams.get('title'),
-    'VÁLLALHATATLAN ILLUSZTRÁCIÓS MOTOR',
+    'VÁLLALHATATLAN // VALÓSÁG MOTOR',
     70,
   );
   const subtitle = safeText(
     searchParams.get('subtitle'),
-    'Karakterekből jelenetek. Karakterhű képgenerálás analóg, noir és VHS hangulattal.',
+    'Karakter be. Valóság ki.',
     140,
   );
-  const eyebrow = safeText(searchParams.get('eyebrow'), 'V3 / IMAGE GENERATOR', 34);
+  const eyebrow = safeText(searchParams.get('eyebrow'), 'V3 / VALÓSÁG MOTOR', 34);
 
   const titleParts = wrapText(title.toUpperCase(), 23);
   const subtitleParts = wrapText(subtitle, 42);
