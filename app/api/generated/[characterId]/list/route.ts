@@ -15,7 +15,7 @@ export async function GET(req: NextRequest, { params }: { params: { characterId:
 
   const supabase = await createSupabaseServerClient();
 
-  let query = supabase
+  const query = supabase
     .from('generated_images')
     .select('id, owner_id, character_id, character_ids, storage_path, prompt, style, camera, aspect_ratio, variant, credit_cost, created_at')
     .eq('owner_id', user.id)
@@ -36,6 +36,7 @@ export async function GET(req: NextRequest, { params }: { params: { characterId:
   for (const image of matches) {
     try {
       images.push({
+        id: image.id,
         filename: image.storage_path.split('/').pop() || image.id,
         url: await createSignedMediaUrl(image.storage_path, 3600),
         created: new Date(image.created_at).getTime(),
@@ -47,6 +48,7 @@ export async function GET(req: NextRequest, { params }: { params: { characterId:
           aspectRatio: image.aspect_ratio,
           variant: image.variant,
           prompt: image.prompt,
+          creditCost: image.credit_cost,
         },
       });
     } catch (signError) {
