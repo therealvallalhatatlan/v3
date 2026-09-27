@@ -1,0 +1,25 @@
+[
+  {
+    "legacyId": "a67ab1bb-84bb-440b-ba04-66cf740c3b48",
+    "newId": "a67ab1bb-84bb-440b-ba04-66cf740c3b48",
+    "name": "V",
+    "referenceCount": 2,
+    "uploadedReferences": 2,
+    "storagePaths": [
+      "system/characters/a67ab1bb-84bb-440b-ba04-66cf740c3b48/references/1.png",
+      "system/characters/a67ab1bb-84bb-440b-ba04-66cf740c3b48/references/2.png"
+    ]
+  },
+  {
+    "legacyId": "1da3893a-a665-4de0-830f-9eb1d99f6d18",
+    "newId": "1da3893a-a665-4de0-830f-9eb1d99f6d18",
+    "name": "B",
+    "referenceCount": 3,
+    "uploadedReferences": 3,
+    "storagePaths": [
+      "system/characters/1da3893a-a665-4de0-830f-9eb1d99f6d18/references/1.png",
+      "system/characters/1da3893a-a665-4de0-830f-9eb1d99f6d18/references/2.jpg",
+      "system/characters/1da3893a-a665-4de0-830f-9eb1d99f6d18/references/3.png"
+    ]
+  }
+]

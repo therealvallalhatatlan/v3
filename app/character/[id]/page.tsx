@@ -494,7 +494,7 @@ export default function CharacterDetailPage() {
 
   return (
     <main className="min-h-screen bg-black text-gray-100 font-mono flex flex-col items-center mt-6">
-      <div className="w-full max-w-6xl px-4">
+      <div className="w-full max-w-7xl px-6">
         <div className="flex justify-between items-center mb-8 gap-4">
           <h1 className="text-3xl font-bold tracking-tight">Új jelenet</h1>
         </div>
