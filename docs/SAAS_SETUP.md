@@ -64,7 +64,14 @@ The service-role key is only needed for local migration/admin tooling.
 - A/B compare = 2 credits
 - failed generation refunds the reserved credits
 
-Stripe credit packages are intentionally not activated yet.
+The initial Stripe package defaults are:
+- Starter: 30 credits, 0 character slots, 2490 HUF
+- Creator: 75 credits, 1 character slot, 4990 HUF
+- Studio: 200 credits, 2 character slots, 9990 HUF
+- Pro: 500 credits, 5 character slots, 19990 HUF
+- Big: 1000 credits, 10 character slots, 34990 HUF
+
+These defaults can be overridden with CREDIT_PACKAGES_JSON in the deployment environment.
 
 ## 6. Stripe credit purchases
 
