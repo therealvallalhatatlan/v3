@@ -22,6 +22,8 @@ export async function generateImage(
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY not set');
 
+  const model = process.env.GEMINI_IMAGE_MODEL || 'gemini-3.1-flash-image';
+
   const selectedReferenceImages = referenceImageDataUrls.slice(0, 6);
   if (referenceImageDataUrls.length > selectedReferenceImages.length) {
     console.log(`Using ${selectedReferenceImages.length} of ${referenceImageDataUrls.length} reference images for Gemini`);
@@ -50,7 +52,7 @@ export async function generateImage(
   console.log('GEMINI REQUEST BODY:', JSON.stringify(body, null, 2));
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
