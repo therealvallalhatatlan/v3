@@ -2,15 +2,32 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
-const items = [
-  { href: '/', label: 'Karakterek' },
-  { href: '/character/new', label: 'Karakter létrehozása' },
-  { href: '/presets', label: 'Presetek' },
-];
+type Account = {
+  authenticated: boolean;
+  plan?: 'free' | 'paid' | 'admin';
+  generationCredits?: number;
+};
 
 export default function TopNav() {
   const pathname = usePathname();
+  const [account, setAccount] = useState<Account | null>(null);
+
+  useEffect(() => {
+    fetch('/api/me')
+      .then((res) => res.json())
+      .then(setAccount)
+      .catch(() => setAccount({ authenticated: false }));
+  }, []);
+
+  const isPaid = account?.plan === 'paid' || account?.plan === 'admin';
+
+  const items = [
+    { href: '/', label: 'Karakterek' },
+    ...(isPaid ? [{ href: '/character/new', label: 'Karakter létrehozása' }] : []),
+    ...(isPaid ? [{ href: '/presets', label: 'Presetek' }] : []),
+  ];
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-gray-800 bg-black/90 backdrop-blur-xl">
@@ -19,7 +36,7 @@ export default function TopNav() {
           href="/"
           className="shrink-0 [font-family:var(--font-montserrat)] text-sm font-bold italic tracking-[-0.02em] text-white"
         >
-           Vállalhatatlan Illusztrációs Motor🐰 
+          Vállalhatatlan Illusztrációs Motor🐰
         </Link>
 
         <nav className="flex items-center gap-1 overflow-x-auto" aria-label="Fő navigáció">
