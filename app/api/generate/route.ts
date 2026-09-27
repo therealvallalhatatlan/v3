@@ -93,6 +93,7 @@ function resolveLocationText(location: unknown, scenePackage?: ScenePackageInput
 
 export async function POST(req: NextRequest) {
   let reservedCredits = 0;
+  let consumedCredits = 0;
   let currentUserId = '';
   try {
     const user = await getCurrentUser();
@@ -222,6 +223,7 @@ export async function POST(req: NextRequest) {
     let imagePath = null;
     if (!imageBase64) throw new Error('Gemini returned no image data');
     const savedA = await saveGeneratedRecord(imageBase64, generationIdA, styleKey, compareStyleKey ? 'A' : 'single', prompt);
+    consumedCredits = 1;
     const imagePath = savedA.url;
 
     if (compareStyleKey) {
@@ -231,6 +233,7 @@ export async function POST(req: NextRequest) {
       let imagePathB = null;
       if (!imageBase64B || !generationIdB) throw new Error('Gemini returned no comparison image data');
       const savedB = await saveGeneratedRecord(imageBase64B, generationIdB, compareStyleKey, 'B', comparePrompt);
+      consumedCredits = 2;
       imagePathB = savedB.url;
       await supabase.from('generation_events').insert({
         user_id: currentUserId,
@@ -253,20 +256,21 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, imagePath, image: imagePath, prompt, characterIds: normalizedCharacterIds, aspectRatio: aspectRatioKey, style: styleKey, locationProfileId: normalizedScenePackage?.locationProfileId, locationFingerprint, creditCost: reservedCredits });
   } catch (error: any) {
-    if (currentUserId && reservedCredits > 0) {
+    const refundableCredits = Math.max(0, reservedCredits - consumedCredits);
+    if (currentUserId && refundableCredits > 0) {
       try {
         const supabase = await createSupabaseServerClient();
         await supabase.rpc('refund_generation_credits', {
           p_user_id: currentUserId,
-          p_cost: reservedCredits,
+          p_cost: refundableCredits,
           p_reference: 'generation_error',
         });
         await supabase.from('generation_events').insert({
           user_id: currentUserId,
           status: 'failed',
           provider: 'gemini',
-          credits: reservedCredits,
-          metadata: { error: error?.message || 'unknown error' },
+          credits: refundableCredits,
+          metadata: { error: error?.message || 'unknown error', reservedCredits, consumedCredits },
         });
       } catch (refundError) {
         console.error('Credit refund error:', refundError);
