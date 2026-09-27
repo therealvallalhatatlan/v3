@@ -34,6 +34,8 @@ export async function POST(req: NextRequest) {
     const stripe = getStripe();
     const origin = req.nextUrl.origin;
 
+    const stripeUnitAmount = pack.amountHuf * 100;
+
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       client_reference_id: user.id,
@@ -43,7 +45,7 @@ export async function POST(req: NextRequest) {
           quantity: 1,
           price_data: {
             currency: 'huf',
-            unit_amount: pack.amountHuf,
+            unit_amount: stripeUnitAmount,
             product_data: {
               name: pack.name,
               description: `${pack.credits} kredit${pack.characterSlots ? ` + ${pack.characterSlots} karakterhely` : ''}`,
@@ -56,6 +58,7 @@ export async function POST(req: NextRequest) {
         packageId: pack.id,
         credits: String(pack.credits),
         characterSlots: String(pack.characterSlots),
+        amountHuf: String(pack.amountHuf),
       },
       success_url: `${origin}/credits?success=1&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/credits?canceled=1`,
