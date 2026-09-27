@@ -1,6 +1,6 @@
 'use client';
 
-import LoadingScreen from '../../../components/LoadingScreen';
+import LoadingScreen from '../../components/LoadingScreen';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
