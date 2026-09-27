@@ -1,5 +1,7 @@
 'use client';
 
+import LoadingScreen from '../components/LoadingScreen';
+
 import { useEffect, useMemo, useState } from 'react';
 
 type PresetType = 'location' | 'camera' | 'style';
@@ -196,7 +198,7 @@ export default function PresetsPage() {
               <button type="button" onClick={load} className="text-xs px-3 py-2 rounded border border-gray-700 hover:border-gray-500">Frissítés</button>
             </div>
 
-            {loading ? <div className="text-sm text-gray-500">Betöltés…</div> : (
+            {loading ? <LoadingScreen /> : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 {filtered.map((preset) => (
                   <article key={preset.id} className={`rounded-xl border p-4 ${preset.builtin ? 'border-gray-800 bg-gray-800/40' : 'border-indigo-900/60 bg-indigo-950/20'}`}>
