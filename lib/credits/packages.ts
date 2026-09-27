@@ -6,7 +6,13 @@ export type CreditPackage = {
   amountHuf: number;
 };
 
-const FALLBACK_PACKAGES: CreditPackage[] = [];
+const FALLBACK_PACKAGES: CreditPackage[] = [
+  { id: 'starter', name: 'Starter', credits: 30, characterSlots: 0, amountHuf: 2490 },
+  { id: 'creator', name: 'Creator', credits: 75, characterSlots: 1, amountHuf: 4990 },
+  { id: 'studio', name: 'Studio', credits: 200, characterSlots: 2, amountHuf: 9990 },
+  { id: 'pro', name: 'Pro', credits: 500, characterSlots: 5, amountHuf: 19990 },
+  { id: 'big', name: 'Big', credits: 1000, characterSlots: 10, amountHuf: 34990 },
+];
 
 export function getCreditPackages(): CreditPackage[] {
   const raw = process.env.CREDIT_PACKAGES_JSON;
