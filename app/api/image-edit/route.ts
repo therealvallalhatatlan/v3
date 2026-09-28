@@ -98,8 +98,28 @@ export async function GET(req: NextRequest) {
   if (profileError) return NextResponse.json({ error: 'Unable to load user profile' }, { status: 500 });
   if (profile?.plan !== 'admin') return NextResponse.json({ error: 'A képszerkesztés jelenleg csak adminoknak érhető el.' }, { status: 403 });
 
-  const sessionId = normalizeText(req.nextUrl.searchParams.get('sessionId'), 100);
-  if (!sessionId) return NextResponse.json({ error: 'Missing sessionId' }, { status: 400 });
+  let sessionId = normalizeText(req.nextUrl.searchParams.get('sessionId'), 100);
+  const generationId = normalizeText(req.nextUrl.searchParams.get('generationId'), 120);
+
+  if (!sessionId && generationId) {
+    const generation = await getOwnedGeneration(supabase, user.id, generationId);
+
+    if (generation.edit_session_id) {
+      sessionId = String(generation.edit_session_id);
+    } else {
+      const { data: rootSession, error: rootSessionError } = await supabase
+        .from('image_edit_sessions')
+        .select('id')
+        .eq('owner_id', user.id)
+        .eq('root_generation_id', generation.id)
+        .maybeSingle();
+
+      if (rootSessionError) throw new Error(`Unable to locate edit session: ${rootSessionError.message}`);
+      sessionId = rootSession?.id ? String(rootSession.id) : '';
+    }
+  }
+
+  if (!sessionId) return NextResponse.json({ error: 'Edit session not found' }, { status: 404 });
 
   try {
     const session = await getSession(supabase, user.id, sessionId);
