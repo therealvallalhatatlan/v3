@@ -100,7 +100,11 @@ export default function ImageEditChat({
     setShowReferencePicker(false);
 
     const saved = window.localStorage.getItem(`v3:image-edit-session:${generationId}`);
-    if (saved) void loadSession(saved);
+    if (saved) {
+      void loadSession(saved);
+    } else {
+      void loadSessionByGeneration(generationId);
+    }
   }, [open]);
 
   useEffect(() => {
@@ -264,7 +268,45 @@ export default function ImageEditChat({
     }
   };
 
-  const resetReferences = () => setPendingReferences([]);
+  const loadSessionByGeneration = async (id: string) => {
+    if (!id) return;
+    try {
+      const response = await fetch(`/api/image-edit?generationId=${encodeURIComponent(id)}`, { cache: 'no-store' });
+      if (response.status === 404) return;
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || 'A szerkesztési előzmények nem tölthetők be.');
+      const discoveredSessionId = String(data.session?.id || '');
+      if (!discoveredSessionId) return;
+
+      setSessionId(discoveredSessionId);
+      window.localStorage.setItem(`v3:image-edit-session:${generationId}`, discoveredSessionId);
+      setVersions(
+        (data.versions || []).map((item: any) => ({
+          id: String(item.id),
+          url: String(item.url),
+          version: Number(item.version || 0),
+          instruction: item.instruction ? String(item.instruction) : null,
+        }))
+      );
+      setMessages((data.messages || []).map((item: any) => ({
+        id: String(item.id),
+        role: item.role === 'assistant' ? 'assistant' : 'user',
+        content: String(item.content || ''),
+        metadata: item.metadata || undefined,
+      })));
+      if (data.current?.url && data.current?.id) {
+        setCurrentImageUrl(data.current.url);
+        setCurrentGenerationId(data.current.id);
+        onImageChange(data.current.url, data.current.id);
+      }
+    } catch (err: any) {
+      setError(err?.message || 'A szerkesztési előzmények nem tölthetők be.');
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+    const resetReferences = () => setPendingReferences([]);
 
   const charLabel = (id: string) => characters.find((item) => item.id === id)?.name || id;
 
@@ -272,11 +314,11 @@ export default function ImageEditChat({
     <div className="fixed inset-0 z-[70] bg-black/90 backdrop-blur-sm p-3 sm:p-6">
       <div className="mx-auto flex h-full max-w-7xl flex-col overflow-hidden rounded-2xl border border-gray-800 bg-zinc-950 shadow-2xl">
         <div className="flex items-center justify-between border-b border-gray-800 px-4 py-3">
-          <div>
+          <div className="min-w-0">
             <div className="text-xs uppercase tracking-[0.18em] text-gray-500">Képszerkesztő</div>
             <div className="text-sm font-semibold text-white">Beszélj hozzá a képhez</div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             {versions.length > 0 && (
               <select
                 value={currentGenerationId}
@@ -289,7 +331,7 @@ export default function ImageEditChat({
                   onImageChange(selected.url, selected.id);
                 }}
                 disabled={loading || loadingHistory}
-                className="max-w-[280px] rounded-lg border border-gray-700 bg-black px-3 py-1.5 text-xs text-gray-200 outline-none hover:border-gray-500 focus:border-gray-500"
+                className="max-w-[320px] min-w-0 rounded-lg border border-gray-700 bg-black px-3 py-1.5 text-xs text-gray-200 outline-none hover:border-gray-500 focus:border-gray-500"
                 aria-label="Képes verzió kiválasztása"
               >
                 {versions.map((version) => (
@@ -301,10 +343,8 @@ export default function ImageEditChat({
                 ))}
               </select>
             )}
-          </div>
-          <div className="flex items-center gap-2">
-            {loadingHistory && <span className="text-xs text-gray-500">Előzmények…</span>}
-            <button type="button" onClick={onClose} className="rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-300 hover:border-gray-500 hover:text-white">Bezárás</button>
+            {loadingHistory && <span className="shrink-0 text-xs text-gray-500">Előzmények…</span>}
+            <button type="button" onClick={onClose} className="shrink-0 rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-300 hover:border-gray-500 hover:text-white">Bezárás</button>
           </div>
         </div>
 
@@ -317,7 +357,7 @@ export default function ImageEditChat({
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
               {versions.length > 0 && (
                 <div className="mb-3 text-[10px] uppercase tracking-[0.16em] text-gray-600">
-                  V{versions.find((item) => item.id === currentGenerationId)?.version ?? 0} kiválasztva · a következő módosítás innen indul
+                  V{versions.find((item) => item.id === currentGenerationId)?.version ?? 0} kiválasztva · a következő módosítás ebből a verzióból indul
                 </div>
               )}
 
