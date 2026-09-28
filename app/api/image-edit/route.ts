@@ -78,11 +78,20 @@ export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
+  const supabase = await createSupabaseServerClient();
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('plan')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (profileError) return NextResponse.json({ error: 'Unable to load user profile' }, { status: 500 });
+  if (profile?.plan !== 'admin') return NextResponse.json({ error: 'A képszerkesztés jelenleg csak adminoknak érhető el.' }, { status: 403 });
+
   const sessionId = normalizeText(req.nextUrl.searchParams.get('sessionId'), 100);
   if (!sessionId) return NextResponse.json({ error: 'Missing sessionId' }, { status: 400 });
 
   try {
-    const supabase = await createSupabaseServerClient();
     const session = await getSession(supabase, user.id, sessionId);
 
     const { data: messages, error: messageError } = await supabase
@@ -114,6 +123,16 @@ export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
+  const supabase = await createSupabaseServerClient();
+  const { data: adminProfile, error: adminProfileError } = await supabase
+    .from('profiles')
+    .select('plan')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (adminProfileError) return NextResponse.json({ error: 'Unable to load user profile' }, { status: 500 });
+  if (adminProfile?.plan !== 'admin') return NextResponse.json({ error: 'A képszerkesztés jelenleg csak adminoknak érhető el.' }, { status: 403 });
+
   let reserved = 0;
   try {
     const body = await req.json().catch(() => ({}));
@@ -135,7 +154,6 @@ export async function POST(req: NextRequest) {
 
     const uploadedReferences = rawReferences.map(parseDataUrl);
 
-    const supabase = await createSupabaseServerClient();
     const profileResult = await supabase
       .from('profiles')
       .select('plan, generation_credits')
