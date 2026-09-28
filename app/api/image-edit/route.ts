@@ -256,6 +256,7 @@ export async function POST(req: NextRequest) {
     try {
       generated = await generateImageInteraction({
         prompt,
+        sourceImage: currentImage,
         additionalImages,
         previousInteractionId,
         aspectRatio: currentGeneration.aspect_ratio === 'portrait-9-16' ? '9:16' : '16:9',
