@@ -38,7 +38,7 @@ function characterReferenceInputs(character: { imagePaths?: string[] }, max = MA
 async function getOwnedGeneration(supabase: any, userId: string, generationId: string) {
   const { data, error } = await supabase
     .from('generated_images')
-    .select('id, owner_id, character_id, character_ids, storage_path, prompt, style, camera, aspect_ratio, variant, credit_cost, edit_index, edit_session_id, gemini_interaction_id, created_at')
+    .select('id, owner_id, character_id, character_ids, storage_path, prompt, style, camera, aspect_ratio, variant, credit_cost, parent_generation_id, edit_index, edit_session_id, edit_instruction, gemini_interaction_id, created_at')
     .eq('id', generationId)
     .eq('owner_id', userId)
     .maybeSingle();
@@ -61,17 +61,27 @@ async function getSession(supabase: any, userId: string, sessionId: string) {
   return data;
 }
 
-async function recentUserEdits(supabase: any, sessionId: string): Promise<string[]> {
+async function recentUserEdits(supabase: any, userId: string, generationId: string): Promise<string[]> {
+  const lineageIds: string[] = [];
+  let cursor: string | null = generationId;
+
+  for (let depth = 0; depth < 24 && cursor; depth += 1) {
+    lineageIds.push(cursor);
+    const generation = await getOwnedGeneration(supabase, userId, cursor);
+    cursor = generation.parent_generation_id ? String(generation.parent_generation_id) : null;
+  }
+
   const { data, error } = await supabase
     .from('image_edit_messages')
-    .select('content, role')
-    .eq('session_id', sessionId)
+    .select('content, role, generation_id')
+    .eq('owner_id', userId)
     .eq('role', 'user')
-    .order('created_at', { ascending: false })
-    .limit(8);
+    .in('generation_id', lineageIds)
+    .order('created_at', { ascending: true })
+    .limit(24);
 
   if (error) return [];
-  return (data || []).map((row: any) => String(row.content || '').trim()).filter(Boolean).reverse();
+  return (data || []).map((row: any) => String(row.content || '').trim()).filter(Boolean).slice(-8);
 }
 
 export async function GET(req: NextRequest) {
@@ -103,17 +113,55 @@ export async function GET(req: NextRequest) {
 
     if (messageError) throw new Error(`Unable to load edit history: ${messageError.message}`);
 
-    let current = null;
-    if (session.current_generation_id) {
-      const generation = await getOwnedGeneration(supabase, user.id, session.current_generation_id);
-      current = {
+    const generationsResult = await supabase
+      .from('generated_images')
+      .select('id, owner_id, character_id, character_ids, storage_path, prompt, style, camera, aspect_ratio, variant, credit_cost, parent_generation_id, edit_session_id, edit_instruction, edit_response, edit_index, gemini_interaction_id, created_at')
+      .eq('owner_id', user.id)
+      .eq('edit_session_id', session.id)
+      .order('edit_index', { ascending: true });
+
+    if (generationsResult.error) {
+      throw new Error(`Unable to load edit versions: ${generationsResult.error.message}`);
+    }
+
+    const versions: any[] = [];
+    if (!session.root_generation_id) throw new Error('Edit session has no root generation.');
+
+    const rootGeneration = await getOwnedGeneration(supabase, user.id, session.root_generation_id);
+    versions.push({
+      id: rootGeneration.id,
+      url: await createSignedMediaUrl(rootGeneration.storage_path, 3600),
+      version: 0,
+      instruction: null,
+      createdAt: rootGeneration.created_at,
+    });
+
+    for (const generation of generationsResult.data || []) {
+      if (generation.id === rootGeneration.id) continue;
+      versions.push({
         id: generation.id,
         url: await createSignedMediaUrl(generation.storage_path, 3600),
         version: Number(generation.edit_index || 0),
-      };
+        instruction: generation.edit_instruction || null,
+        createdAt: generation.created_at,
+      });
     }
 
-    return NextResponse.json({ session, messages: messages || [], current });
+    versions.sort((a, b) => a.version - b.version || String(a.createdAt).localeCompare(String(b.createdAt)));
+
+    const currentGeneration = session.current_generation_id
+      ? versions.find((version) => version.id === session.current_generation_id)
+      : null;
+
+    const current = currentGeneration
+      ? {
+          id: currentGeneration.id,
+          url: currentGeneration.url,
+          version: currentGeneration.version,
+        }
+      : null;
+
+    return NextResponse.json({ session, messages: messages || [], current, versions });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Failed to load edit session' }, { status: 500 });
   }
@@ -167,9 +215,23 @@ export async function POST(req: NextRequest) {
     }
 
     let session = requestedSessionId ? await getSession(supabase, user.id, requestedSessionId) : null;
-    let currentGeneration = session?.current_generation_id
-      ? await getOwnedGeneration(supabase, user.id, session.current_generation_id)
-      : null;
+    let currentGeneration = null;
+
+    if (session) {
+      const selectedGenerationId = sourceGenerationId || session.current_generation_id;
+      if (!selectedGenerationId) throw new Error('Edit session has no current generation.');
+
+      const selectedGeneration = await getOwnedGeneration(supabase, user.id, selectedGenerationId);
+      const belongsToSession =
+        selectedGeneration.id === session.root_generation_id ||
+        selectedGeneration.edit_session_id === session.id;
+
+      if (!belongsToSession) {
+        return NextResponse.json({ error: 'A kiválasztott verzió nem tartozik ehhez a szerkesztési munkamenethez.' }, { status: 403 });
+      }
+
+      currentGeneration = selectedGeneration;
+    }
 
     if (!session) {
       if (!sourceGenerationId) return NextResponse.json({ error: 'Missing sourceGenerationId' }, { status: 400 });
@@ -215,7 +277,7 @@ export async function POST(req: NextRequest) {
     }
 
     const currentImageDataUrl = await downloadAsDataUrl(currentGeneration.storage_path);
-    const recentEdits = await recentUserEdits(supabase, session.id);
+    const recentEdits = await recentUserEdits(supabase, user.id, currentGeneration.id);
     const characterNames = currentCharacters.map((item: any) => item.name);
     const addedCharacterNames = addedCharacters.map((item: any) => item.name);
 
@@ -251,7 +313,7 @@ export async function POST(req: NextRequest) {
     reserved = 1;
 
     let generated;
-    const previousInteractionId = session.gemini_interaction_id || currentGeneration.gemini_interaction_id || null;
+    const previousInteractionId = currentGeneration.gemini_interaction_id || null;
 
     try {
       generated = await generateImageInteraction({
