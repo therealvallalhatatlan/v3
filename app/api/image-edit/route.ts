@@ -126,6 +126,9 @@ export async function POST(req: NextRequest) {
       : [];
 
     if (!instruction) return NextResponse.json({ error: 'Írd le, mit szeretnél módosítani a képen.' }, { status: 400 });
+    if (addedCharacterIds.length > 3) {
+      return NextResponse.json({ error: 'Egy szerkesztési körben legfeljebb 3 új karakter adható hozzá.' }, { status: 400 });
+    }
     if (rawReferences.length > MAX_REFERENCE_UPLOADS) {
       return NextResponse.json({ error: `Legfeljebb ${MAX_REFERENCE_UPLOADS} új referencia kép adható egy körben.` }, { status: 400 });
     }
@@ -171,6 +174,8 @@ export async function POST(req: NextRequest) {
       if (sessionError) throw new Error(`Edit session creation failed: ${sessionError.message}`);
       session = createdSession;
     }
+
+    if (!currentGeneration) throw new Error('Edit session has no current generation.');
 
     const currentCharacterIds = Array.isArray(currentGeneration.character_ids)
       ? currentGeneration.character_ids.map(String)
@@ -273,7 +278,7 @@ export async function POST(req: NextRequest) {
       character_id: currentGeneration.character_id,
       character_ids: allCharacterIds,
       storage_path: storagePath,
-      prompt: generated.responseText || prompt,
+      prompt,
       style: currentGeneration.style,
       camera: currentGeneration.camera,
       aspect_ratio: currentGeneration.aspect_ratio,
