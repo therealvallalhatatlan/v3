@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient, getCurrentUser } from '../../../../../lib/supabase/server';
-import { createSignedMediaUrl } from '../../../../../lib/supabase/media';
+import { createSignedMediaUrls } from '../../../../../lib/supabase/media';
 
 export async function GET(req: NextRequest, { params }: { params: { characterId: string } }) {
   const user = await getCurrentUser();
@@ -32,13 +32,20 @@ export async function GET(req: NextRequest, { params }: { params: { characterId:
     return true;
   });
 
-  const images = [];
-  for (const image of matches) {
-    try {
-      images.push({
+  const signedUrls = await createSignedMediaUrls(
+    matches.map((image) => image.storage_path),
+    3600,
+  );
+
+  const images = matches
+    .map((image) => {
+      const url = signedUrls[image.storage_path];
+      if (!url) return null;
+
+      return {
         id: image.id,
         filename: image.storage_path.split('/').pop() || image.id,
-        url: await createSignedMediaUrl(image.storage_path, 3600),
+        url,
         created: new Date(image.created_at).getTime(),
         meta: {
           characterId: image.character_id,
@@ -55,11 +62,9 @@ export async function GET(req: NextRequest, { params }: { params: { characterId:
           editResponse: image.edit_response,
           editIndex: image.edit_index,
         },
-      });
-    } catch (signError) {
-      console.error('Unable to sign generated image:', image.storage_path, signError);
-    }
-  }
+      };
+    })
+    .filter(Boolean);
 
   return NextResponse.json({ images });
 }
