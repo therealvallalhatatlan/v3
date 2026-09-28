@@ -857,7 +857,17 @@ export default function CharacterDetailPage() {
             </>
           )}
 
-          {activeTab === 'gallery' && <Gallery characterId={primaryCharacterId} onUseForAnimation={handleUseForAnimation} />}
+          {activeTab === 'gallery' && (
+            <Gallery
+              characterId={primaryCharacterId}
+              onUseForAnimation={handleUseForAnimation}
+              onEdit={({ id, url }) => {
+                setResult(url);
+                setEditGenerationId(id);
+                setEditChatOpen(true);
+              }}
+            />
+          )}
         </div>
       </div>
 
