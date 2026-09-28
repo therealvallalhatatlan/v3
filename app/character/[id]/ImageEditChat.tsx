@@ -26,6 +26,13 @@ type PendingReference = {
   dataUrl: string;
 };
 
+type VersionInfo = {
+  id: string;
+  url: string;
+  version: number;
+  instruction?: string | null;
+};
+
 type Props = {
   open: boolean;
   imageUrl: string;
@@ -67,6 +74,9 @@ export default function ImageEditChat({
   const [sessionId, setSessionId] = useState('');
   const [currentGenerationId, setCurrentGenerationId] = useState(generationId);
   const [currentImageUrl, setCurrentImageUrl] = useState(imageUrl);
+  const [versions, setVersions] = useState<VersionInfo[]>([
+    { id: generationId, url: imageUrl, version: 0, instruction: null },
+  ]);
   const [loading, setLoading] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [error, setError] = useState('');
@@ -82,6 +92,7 @@ export default function ImageEditChat({
     setSessionId('');
     setCurrentGenerationId(generationId);
     setCurrentImageUrl(imageUrl);
+    setVersions([{ id: generationId, url: imageUrl, version: 0, instruction: null }]);
     setSelectedCharacterIds([]);
     setPendingReferences([]);
     setInstruction('');
@@ -180,8 +191,22 @@ export default function ImageEditChat({
       setSessionId(nextSessionId);
       window.localStorage.setItem(`v3:image-edit-session:${generationId}`, nextSessionId);
       if (data.generationId) window.localStorage.setItem(`v3:image-edit-session:${data.generationId}`, nextSessionId);
-      setCurrentGenerationId(String(data.generationId || currentGenerationId));
-      setCurrentImageUrl(String(data.image || currentImageUrl));
+      const nextGenerationId = String(data.generationId || currentGenerationId);
+      const nextImageUrl = String(data.image || currentImageUrl);
+      const nextVersion = Number(data.version || 0);
+
+      setCurrentGenerationId(nextGenerationId);
+      setCurrentImageUrl(nextImageUrl);
+      setVersions((current) => {
+        const next = current.filter((item) => item.id !== nextGenerationId);
+        next.push({
+          id: nextGenerationId,
+          url: nextImageUrl,
+          version: nextVersion,
+          instruction: text,
+        });
+        return next.sort((a, b) => a.version - b.version);
+      });
       setMessages((current) => [
         ...current,
         {
@@ -213,6 +238,14 @@ export default function ImageEditChat({
       if (!response.ok) throw new Error(data?.error || 'A szerkesztési előzmények nem tölthetők be.');
       setSessionId(id);
       window.localStorage.setItem(`v3:image-edit-session:${generationId}`, id);
+      setVersions(
+        (data.versions || []).map((item: any) => ({
+          id: String(item.id),
+          url: String(item.url),
+          version: Number(item.version || 0),
+          instruction: item.instruction ? String(item.instruction) : null,
+        }))
+      );
       setMessages((data.messages || []).map((item: any) => ({
         id: String(item.id),
         role: item.role === 'assistant' ? 'assistant' : 'user',
@@ -244,6 +277,32 @@ export default function ImageEditChat({
             <div className="text-sm font-semibold text-white">Beszélj hozzá a képhez</div>
           </div>
           <div className="flex items-center gap-2">
+            {versions.length > 0 && (
+              <select
+                value={currentGenerationId}
+                onChange={(event) => {
+                  const selected = versions.find((item) => item.id === event.target.value);
+                  if (!selected || selected.id === currentGenerationId) return;
+                  setError('');
+                  setCurrentGenerationId(selected.id);
+                  setCurrentImageUrl(selected.url);
+                  onImageChange(selected.url, selected.id);
+                }}
+                disabled={loading || loadingHistory}
+                className="max-w-[280px] rounded-lg border border-gray-700 bg-black px-3 py-1.5 text-xs text-gray-200 outline-none hover:border-gray-500 focus:border-gray-500"
+                aria-label="Képes verzió kiválasztása"
+              >
+                {versions.map((version) => (
+                  <option key={version.id} value={version.id}>
+                    {version.version === 0
+                      ? 'V0 · Eredeti kép'
+                      : `V${version.version} · ${version.instruction || 'Szerkesztés'}`}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
             {loadingHistory && <span className="text-xs text-gray-500">Előzmények…</span>}
             <button type="button" onClick={onClose} className="rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-300 hover:border-gray-500 hover:text-white">Bezárás</button>
           </div>
@@ -256,6 +315,12 @@ export default function ImageEditChat({
 
           <div className="flex min-h-0 flex-col bg-zinc-950">
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+              {versions.length > 0 && (
+                <div className="mb-3 text-[10px] uppercase tracking-[0.16em] text-gray-600">
+                  V{versions.find((item) => item.id === currentGenerationId)?.version ?? 0} kiválasztva · a következő módosítás innen indul
+                </div>
+              )}
+
               {messages.length === 0 && (
                 <div className="rounded-xl border border-gray-800 bg-gray-900/60 p-4 text-sm text-gray-400">
                   Mondd meg, mit változtassak. A rendszer az aktuális képet tartja alapnak, és csak a kért részt próbálja módosítani.
