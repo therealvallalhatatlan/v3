@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateImage } from '../../../lib/gemini';
 import { generateImageInteraction } from '../../../lib/geminiInteractions';
 import { buildFinalPrompt, buildFinalPromptMulti } from '../../../lib/promptBuilder';
 import { buildCharacterDNAFromCharacter } from '../../../lib/promptBuilder';
