@@ -27,7 +27,7 @@ interface Props {
 
 type Modal = 'info' | 'share' | null;
 
-function Icon({ name }: { name: 'download' | 'play' | 'info' | 'share' | 'close' | 'copy' | 'facebook' | 'instagram' | 'mail' | 'link' }) {
+function Icon({ name }: { name: 'download' | 'play' | 'info' | 'share' | 'close' | 'copy' | 'facebook' | 'instagram' | 'mail' | 'link' | 'trash' }) {
   const common = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
   if (name === 'download') return <svg {...common}><path d="M12 3v11" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></svg>;
   if (name === 'play') return <svg {...common}><path d="m8 5 11 7-11 7V5Z" /></svg>;
@@ -38,7 +38,8 @@ function Icon({ name }: { name: 'download' | 'play' | 'info' | 'share' | 'close'
   if (name === 'facebook') return <svg {...common}><path d="M14 8h3V4h-3c-3 0-5 2-5 5v3H6v4h3v4h4v-4h3l1-4h-4V9c0-.7.3-1 1-1Z" /></svg>;
   if (name === 'instagram') return <svg {...common}><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><path d="M17.5 6.5h.01" /></svg>;
   if (name === 'mail') return <svg {...common}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m4 7 8 6 8-6" /></svg>;
-  return <svg {...common}><path d="M10 13a5 5 0 0 0 7.1.1l1.8-1.8a5 5 0 0 0-7.1-7.1L10.8 5" /><path d="M14 11a5 5 0 0 0-7.1-.1l-1.8 1.8a5 5 0 0 0 7.1 7.1l1-1" /></svg>;
+  if (name === 'link') return <svg {...common}><path d="M10 13a5 5 0 0 0 7.1.1l1.8-1.8a5 5 0 0 0-7.1-7.1L10.8 5" /><path d="M14 11a5 5 0 0 0-7.1-.1l-1.8 1.8a5 5 0 0 0 7.1 7.1l1-1" /></svg>;
+  return <svg {...common}><path d="M5 7h14" /><path d="M9 7V4h6v3" /><path d="M7 7l1 13h8l1-13" /><path d="M10 11v5" /><path d="M14 11v5" /></svg>;
 }
 
 function formatAspectRatio(value?: ImageMeta['aspectRatio']) {
@@ -65,6 +66,7 @@ export default function Gallery({ characterId, onEdit }: Props) {
   const [modal, setModal] = useState<Modal>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [shareStatus, setShareStatus] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const PAGE_SIZE = 12;
   const totalPages = Math.max(1, Math.ceil(images.length / PAGE_SIZE));
@@ -72,12 +74,17 @@ export default function Gallery({ characterId, onEdit }: Props) {
   const pageImages = images.slice(pageStart, pageStart + PAGE_SIZE);
   const selectedImage = selectedIndex === null ? null : images[selectedIndex] ?? null;
 
-  useEffect(() => {
+  const loadImages = () => {
+    setLoading(true);
     fetch(`/api/generated/${characterId}/list`)
       .then((res) => res.json())
       .then((data) => setImages(data.images || []))
       .catch(() => setImages([]))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadImages();
   }, [characterId]);
 
   useEffect(() => setCurrentPage(1), [characterId]);
@@ -116,6 +123,40 @@ export default function Gallery({ characterId, onEdit }: Props) {
     if (index !== null) setSelectedIndex(index);
     setShareStatus('');
     setModal('share');
+  };
+
+  const deleteImage = async (image: ImageInfo) => {
+    if (!image.id || deletingId) return;
+
+    const confirmed = window.confirm('Biztosan törlöd ezt a képet? A művelet nem vonható vissza.');
+    if (!confirmed) return;
+
+    setDeletingId(image.id);
+    setShareStatus('');
+
+    try {
+      const response = await fetch(`/api/generated/${encodeURIComponent(image.id)}`, {
+        method: 'DELETE',
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || 'A kép törlése sikertelen.');
+      }
+
+      setImages((current) => current.filter((item) => item.id !== image.id));
+      setSelectedIndex((current) => {
+        if (current === null) return null;
+        if (current >= images.length - 1) return Math.max(0, images.length - 2);
+        return current > 0 ? current - 1 : 0;
+      });
+      setModal(null);
+      setShareStatus('A kép törölve.');
+    } catch (error: any) {
+      setShareStatus(error?.message || 'A kép törlése sikertelen.');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const copyLink = async () => {
@@ -239,24 +280,26 @@ export default function Gallery({ characterId, onEdit }: Props) {
                 />
               </button>
 
-              <div className="grid grid-cols-2 gap-2 border-t border-gray-800 bg-zinc-950 p-3 sm:grid-cols-5">
+              <div className={`grid grid-cols-3 gap-2 border-t border-gray-800 bg-zinc-950 p-3 ${onEdit ? 'sm:grid-cols-6' : 'sm:grid-cols-5'}`}>
                 <a
                   href={img.url}
                   download
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-gray-700 px-3 py-2 text-xs font-semibold text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900"
+                  title="Letöltés"
+                  aria-label="Letöltés"
+                  className="inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-700 px-3 py-2 text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900"
                 >
                   <Icon name="download" />
-                  <span>Letöltés</span>
                 </a>
 
                 {onEdit && img.id && (
                   <button
                     type="button"
                     onClick={() => onEdit({ id: img.id!, url: img.url })}
-                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-gray-700 px-3 py-2 text-xs font-semibold text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900"
+                    title="Szerkesztés"
+                    aria-label="Szerkesztés"
+                    className="inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-700 px-3 py-2 text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900"
                   >
-                    <span>✎</span>
-                    <span>Szerkesztés</span>
+                    <Icon name="link" />
                   </button>
                 )}
 
@@ -264,10 +307,10 @@ export default function Gallery({ characterId, onEdit }: Props) {
                   type="button"
                   disabled
                   title="Animálás hamarosan elérhető"
-                  className="inline-flex min-h-10 cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-gray-800 px-3 py-2 text-xs font-semibold text-gray-600 opacity-80"
+                  aria-label="Animálás hamarosan elérhető"
+                  className="inline-flex min-h-10 cursor-not-allowed items-center justify-center rounded-lg border border-gray-800 px-3 py-2 text-gray-600 opacity-80"
                 >
                   <Icon name="play" />
-                  <span>Animálás</span>
                 </button>
 
                 <button
@@ -277,19 +320,32 @@ export default function Gallery({ characterId, onEdit }: Props) {
                     setModal('info');
                     setShareStatus('');
                   }}
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-gray-700 px-3 py-2 text-xs font-semibold text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900"
+                  title="Info"
+                  aria-label="Info"
+                  className="inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-700 px-3 py-2 text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900"
                 >
                   <Icon name="info" />
-                  <span>Info</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => openShare(absoluteIndex)}
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-bold text-black shadow-md transition hover:bg-gray-200 hover:shadow-lg"
+                  title="Megosztás"
+                  aria-label="Megosztás"
+                  className="inline-flex min-h-10 items-center justify-center rounded-lg bg-white px-3 py-2 text-black shadow-md transition hover:bg-gray-200 hover:shadow-lg"
                 >
                   <Icon name="share" />
-                  <span>Megosztás</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void deleteImage(img)}
+                  disabled={!img.id || deletingId === img.id}
+                  title="Törlés"
+                  aria-label="Törlés"
+                  className="inline-flex min-h-10 items-center justify-center rounded-lg border border-red-900/70 px-3 py-2 text-red-300 transition hover:border-red-700 hover:bg-red-950/40 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Icon name="trash" />
                 </button>
               </div>
             </article>
