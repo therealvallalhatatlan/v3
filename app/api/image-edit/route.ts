@@ -17,7 +17,7 @@ function normalizeText(value: unknown, max = 3000): string {
 }
 
 function parseDataUrl(dataUrl: string): GeminiImageInput {
-  const match = String(dataUrl || '').match(/^data:(image\\/[^;]+);base64,(.+)$/i);
+  const match = String(dataUrl || '').match(/^data:(image\/[^;]+);base64,(.+)$/i);
   if (!match) throw new Error('Érvénytelen referencia kép.');
   if (match[0].length > MAX_REFERENCE_DATA_URL_LENGTH) throw new Error('A referencia kép túl nagy.');
   return { mimeType: match[1].toLowerCase(), data: match[2] };
@@ -29,7 +29,7 @@ function uniqueIds(values: unknown[]): string[] {
 
 function characterReferenceInputs(character: { imagePaths?: string[] }, max = MAX_CHARACTER_REFERENCES): GeminiImageInput[] {
   return (character.imagePaths || []).slice(0, max).map((dataUrl) => {
-    const match = String(dataUrl || '').match(/^data:(image\\/[^;]+);base64,(.+)$/i);
+    const match = String(dataUrl || '').match(/^data:(image\/[^;]+);base64,(.+)$/i);
     if (!match) return null;
     return { mimeType: match[1].toLowerCase(), data: match[2] };
   }).filter((item): item is GeminiImageInput => Boolean(item));
@@ -211,7 +211,7 @@ export async function POST(req: NextRequest) {
       ...uploadedReferences,
     ].slice(0, 8);
 
-    const currentImageMatch = currentImageDataUrl.match(/^data:(image\\/[^;]+);base64,(.+)$/i);
+    const currentImageMatch = currentImageDataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/i);
     if (!currentImageMatch) throw new Error('Unable to prepare source image.');
 
     const currentImage = { mimeType: currentImageMatch[1].toLowerCase(), data: currentImageMatch[2] };
