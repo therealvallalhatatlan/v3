@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateImage } from '../../../lib/gemini';
+import { generateImageInteraction } from '../../../lib/geminiInteractions';
 import { buildFinalPrompt, buildFinalPromptMulti } from '../../../lib/promptBuilder';
 import { buildCharacterDNAFromCharacter } from '../../../lib/promptBuilder';
 import { AspectRatio16x9, LocationPreset, SceneInput, ScenePackageInput, ShotTemplate } from '../../../types/prompt';
@@ -219,6 +219,7 @@ export async function POST(req: NextRequest) {
       recordStyle: string,
       recordVariant: 'single' | 'A' | 'B',
       recordPrompt: string,
+      interactionId?: string,
     ) => {
       const storagePath = await saveGeneratedImageToSupabase(imageBase64, currentUserId, generationId, aspectRatioKey, profile.plan === 'free');
       const { error: insertError } = await supabase.from('generated_images').insert({
@@ -233,6 +234,7 @@ export async function POST(req: NextRequest) {
         aspect_ratio: aspectRatioKey,
         variant: recordVariant,
         credit_cost: 1,
+        gemini_interaction_id: interactionId || null,
       });
       if (insertError) throw new Error(`Generated image metadata save failed: ${insertError.message}`);
       const url = await createSignedMediaUrl(storagePath, 3600);
@@ -240,19 +242,49 @@ export async function POST(req: NextRequest) {
     };
 
     const geminiAspectRatio = aspectRatioKey === 'portrait-9-16' ? '9:16' : '16:9';
-    const imageBase64 = await generateImage(prompt, referenceImages, geminiAspectRatio);
-    if (!imageBase64) throw new Error('Gemini returned no image data');
-    const savedA = await saveGeneratedRecord(imageBase64, generationIdA, styleKey, compareStyleKey ? 'A' : 'single', prompt);
+    const generatedA = await generateImageInteraction({
+      prompt,
+      additionalImages: referenceImages.map((dataUrl) => {
+        const match = String(dataUrl).match(/^data:(image\/[^;]+);base64,(.+)$/);
+        return { mimeType: match?.[1] || 'image/png', data: match?.[2] || '' };
+      }),
+      aspectRatio: geminiAspectRatio,
+      imageSize: '1K',
+    });
+    if (!generatedA.imageBase64) throw new Error('Gemini returned no image data');
+    const savedA = await saveGeneratedRecord(
+      generatedA.imageBase64,
+      generationIdA,
+      styleKey,
+      compareStyleKey ? 'A' : 'single',
+      prompt,
+      generatedA.interactionId,
+    );
     consumedCredits = 1;
     const imagePath = savedA.url;
 
     if (compareStyleKey) {
       const compareScene: SceneInput = { ...scene, style: compareStyleKey };
       const comparePrompt = isMultiCharacter ? buildFinalPromptMulti(characterDNAList, compareScene) : buildFinalPrompt(characterDNAList[0], compareScene);
-      const imageBase64B = await generateImage(comparePrompt, referenceImages, geminiAspectRatio);
+      const generatedB = await generateImageInteraction({
+        prompt: comparePrompt,
+        additionalImages: referenceImages.map((dataUrl) => {
+          const match = String(dataUrl).match(/^data:(image\/[^;]+);base64,(.+)$/);
+          return { mimeType: match?.[1] || 'image/png', data: match?.[2] || '' };
+        }),
+        aspectRatio: geminiAspectRatio,
+        imageSize: '1K',
+      });
       let imagePathB = null;
-      if (!imageBase64B || !generationIdB) throw new Error('Gemini returned no comparison image data');
-      const savedB = await saveGeneratedRecord(imageBase64B, generationIdB, compareStyleKey, 'B', comparePrompt);
+      if (!generatedB.imageBase64 || !generationIdB) throw new Error('Gemini returned no comparison image data');
+      const savedB = await saveGeneratedRecord(
+        generatedB.imageBase64,
+        generationIdB,
+        compareStyleKey,
+        'B',
+        comparePrompt,
+        generatedB.interactionId,
+      );
       consumedCredits = 2;
       imagePathB = savedB.url;
       await supabase.from('generation_events').insert({
@@ -262,7 +294,7 @@ export async function POST(req: NextRequest) {
         credits: reservedCredits,
         metadata: { characterIds: normalizedCharacterIds, compare: true, generationIdA, generationIdB },
       });
-      return NextResponse.json({ ok: true, imagePath, imagePathB, image: imagePath, compareImage: imagePathB, prompt, comparePrompt, characterIds: normalizedCharacterIds, aspectRatio: aspectRatioKey, style: styleKey, compareStyle: compareStyleKey, locationProfileId: normalizedScenePackage?.locationProfileId, locationFingerprint, creditCost: reservedCredits });
+      return NextResponse.json({ ok: true, imagePath, imagePathB, image: imagePath, compareImage: imagePathB, generationId: generationIdA, compareGenerationId: generationIdB, prompt, comparePrompt, characterIds: normalizedCharacterIds, aspectRatio: aspectRatioKey, style: styleKey, compareStyle: compareStyleKey, locationProfileId: normalizedScenePackage?.locationProfileId, locationFingerprint, creditCost: reservedCredits });
     }
 
     const { error: eventError } = await supabase.from('generation_events').insert({
@@ -274,7 +306,7 @@ export async function POST(req: NextRequest) {
     });
     if (eventError) console.error('Generation event log error:', eventError);
 
-    return NextResponse.json({ ok: true, imagePath, image: imagePath, prompt, characterIds: normalizedCharacterIds, aspectRatio: aspectRatioKey, style: styleKey, locationProfileId: normalizedScenePackage?.locationProfileId, locationFingerprint, creditCost: reservedCredits });
+    return NextResponse.json({ ok: true, imagePath, image: imagePath, generationId: generationIdA, prompt, characterIds: normalizedCharacterIds, aspectRatio: aspectRatioKey, style: styleKey, locationProfileId: normalizedScenePackage?.locationProfileId, locationFingerprint, creditCost: reservedCredits });
   } catch (error: any) {
     const refundableCredits = Math.max(0, reservedCredits - consumedCredits);
     if (currentUserId && refundableCredits > 0) {

@@ -22,6 +22,7 @@ interface ImageInfo {
 interface Props {
   characterId: string;
   onUseForAnimation?: (url: string) => void;
+  onEdit?: (image: { id: string; url: string }) => void;
 }
 
 type Modal = 'info' | 'share' | null;
@@ -57,7 +58,7 @@ function getShareUrl(url: string) {
   return url;
 }
 
-export default function Gallery({ characterId }: Props) {
+export default function Gallery({ characterId, onEdit }: Props) {
   const [images, setImages] = useState<ImageInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -238,7 +239,7 @@ export default function Gallery({ characterId }: Props) {
                 />
               </button>
 
-              <div className="grid grid-cols-2 gap-2 border-t border-gray-800 bg-zinc-950 p-3 sm:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2 border-t border-gray-800 bg-zinc-950 p-3 sm:grid-cols-5">
                 <a
                   href={img.url}
                   download
@@ -247,6 +248,17 @@ export default function Gallery({ characterId }: Props) {
                   <Icon name="download" />
                   <span>Letöltés</span>
                 </a>
+
+                {onEdit && img.id && (
+                  <button
+                    type="button"
+                    onClick={() => onEdit({ id: img.id!, url: img.url })}
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-gray-700 px-3 py-2 text-xs font-semibold text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900"
+                  >
+                    <span>✎</span>
+                    <span>Szerkesztés</span>
+                  </button>
+                )}
 
                 <button
                   type="button"

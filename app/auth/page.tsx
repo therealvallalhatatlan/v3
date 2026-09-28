@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { createSupabaseBrowserClient } from '../../lib/supabase/client';
 
 export default function AuthPage() {
-  const supabase = createSupabaseBrowserClient();
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
@@ -23,6 +22,15 @@ export default function AuthPage() {
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError('');
+
+    let supabase;
+    try {
+      supabase = createSupabaseBrowserClient();
+    } catch (error: any) {
+      setError(error?.message || 'A Supabase kapcsolat nincs beállítva.');
+      setLoading(false);
+      return;
+    }
 
     const next = new URLSearchParams(window.location.search).get('next');
     const callbackUrl = new URL('/auth/callback', window.location.origin);
@@ -48,6 +56,15 @@ export default function AuthPage() {
     event.preventDefault();
     setLoading(true);
     setError('');
+
+    let supabase;
+    try {
+      supabase = createSupabaseBrowserClient();
+    } catch (error: any) {
+      setError(error?.message || 'A Supabase kapcsolat nincs beállítva.');
+      setLoading(false);
+      return;
+    }
 
     const next = new URLSearchParams(window.location.search).get('next');
     const callbackUrl = new URL('/auth/callback', window.location.origin);

@@ -17,7 +17,7 @@ export async function GET(req: NextRequest, { params }: { params: { characterId:
 
   const query = supabase
     .from('generated_images')
-    .select('id, owner_id, character_id, character_ids, storage_path, prompt, style, camera, aspect_ratio, variant, credit_cost, created_at')
+    .select('id, owner_id, character_id, character_ids, storage_path, prompt, style, camera, aspect_ratio, variant, credit_cost, parent_generation_id, edit_session_id, edit_instruction, edit_response, edit_index, created_at')
     .eq('owner_id', user.id)
     .order('created_at', { ascending: false });
 
@@ -49,6 +49,11 @@ export async function GET(req: NextRequest, { params }: { params: { characterId:
           variant: image.variant,
           prompt: image.prompt,
           creditCost: image.credit_cost,
+          parentGenerationId: image.parent_generation_id,
+          editSessionId: image.edit_session_id,
+          editInstruction: image.edit_instruction,
+          editResponse: image.edit_response,
+          editIndex: image.edit_index,
         },
       });
     } catch (signError) {
