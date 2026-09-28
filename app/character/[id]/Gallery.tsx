@@ -27,7 +27,7 @@ interface Props {
 
 type Modal = 'info' | 'share' | null;
 
-function Icon({ name }: { name: 'download' | 'play' | 'info' | 'share' | 'close' | 'copy' | 'facebook' | 'instagram' | 'mail' | 'link' | 'trash' }) {
+function Icon({ name }: { name: 'download' | 'play' | 'info' | 'share' | 'close' | 'copy' | 'facebook' | 'instagram' | 'mail' | 'link' | 'trash' | 'edit' }) {
   const common = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
   if (name === 'download') return <svg {...common}><path d="M12 3v11" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></svg>;
   if (name === 'play') return <svg {...common}><path d="m8 5 11 7-11 7V5Z" /></svg>;
@@ -39,6 +39,9 @@ function Icon({ name }: { name: 'download' | 'play' | 'info' | 'share' | 'close'
   if (name === 'instagram') return <svg {...common}><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><path d="M17.5 6.5h.01" /></svg>;
   if (name === 'mail') return <svg {...common}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m4 7 8 6 8-6" /></svg>;
   if (name === 'link') return <svg {...common}><path d="M10 13a5 5 0 0 0 7.1.1l1.8-1.8a5 5 0 0 0-7.1-7.1L10.8 5" /><path d="M14 11a5 5 0 0 0-7.1-.1l-1.8 1.8a5 5 0 0 0 7.1 7.1l1-1" /></svg>;
+  if (name === 'trash') return <svg {...common}><path d="M5 7h14" /><path d="M9 7V4h6v3" /><path d="M7 7l1 13h8l1-13" /><path d="M10 11v5" /><path d="M14 11v5" /></svg>;
+  if (name === 'edit') return <svg {...common}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4L16.5 3.5Z" /></svg>;
+  return <svg {...common}><path d="M10 13a5 5 0 0 0 7.1.1l1.8-1.8a5 5 0 0 0-7.1-7.1L10.8 5" /><path d="M14 11a5 5 0 0 0-7.1-.1l-1.8 1.8a5 5 0 0 0 7.1 7.1l1-1" /></svg>;
   return <svg {...common}><path d="M5 7h14" /><path d="M9 7V4h6v3" /><path d="M7 7l1 13h8l1-13" /><path d="M10 11v5" /><path d="M14 11v5" /></svg>;
 }
 
@@ -299,7 +302,7 @@ export default function Gallery({ characterId, onEdit }: Props) {
                     aria-label="Szerkesztés"
                     className="inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-700 px-3 py-2 text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900"
                   >
-                    <Icon name="link" />
+                    <Icon name="edit" />
                   </button>
                 )}
 
