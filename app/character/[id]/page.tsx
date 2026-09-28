@@ -841,7 +841,7 @@ export default function CharacterDetailPage() {
                       <button type="button" className="focus:outline-none rounded" onClick={() => setPreviewImage(result)}>
                         <img src={result} alt="Generated scene" className="rounded shadow-lg max-w-full cursor-zoom-in" />
                       </button>
-                      {editGenerationId && userPlan === 'admin' && (
+                      {editGenerationId && (
                         <button
                           type="button"
                           onClick={() => setEditChatOpen(true)}
@@ -861,17 +861,17 @@ export default function CharacterDetailPage() {
             <Gallery
               characterId={primaryCharacterId}
               onUseForAnimation={handleUseForAnimation}
-              onEdit={userPlan === 'admin' ? ({ id, url }) => {
+              onEdit={({ id, url }) => {
                 setResult(url);
                 setEditGenerationId(id);
                 setEditChatOpen(true);
-              } : undefined}
+              }}
             />
           )}
         </div>
       </div>
 
-      {editChatOpen && userPlan === 'admin' && result && editGenerationId && (
+      {editChatOpen && result && editGenerationId && (
         <ImageEditChat
           open={editChatOpen}
           imageUrl={result}
