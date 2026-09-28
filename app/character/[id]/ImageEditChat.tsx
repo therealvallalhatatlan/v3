@@ -76,20 +76,20 @@ export default function ImageEditChat({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    setCurrentGenerationId(generationId);
-    setCurrentImageUrl(imageUrl);
-  }, [generationId, imageUrl]);
-
-  useEffect(() => {
     if (!open) return;
     setError('');
     setMessages([]);
     setSessionId('');
+    setCurrentGenerationId(generationId);
+    setCurrentImageUrl(imageUrl);
     setSelectedCharacterIds([]);
     setPendingReferences([]);
     setInstruction('');
     setShowCharacterPicker(false);
     setShowReferencePicker(false);
+
+    const saved = window.localStorage.getItem(`v3:image-edit-session:${generationId}`);
+    if (saved) void loadSession(saved);
   }, [open, generationId]);
 
   useEffect(() => {
@@ -182,6 +182,8 @@ export default function ImageEditChat({
 
       const nextSessionId = String(data.sessionId || sessionId || '');
       setSessionId(nextSessionId);
+      window.localStorage.setItem(`v3:image-edit-session:${generationId}`, nextSessionId);
+      if (data.generationId) window.localStorage.setItem(`v3:image-edit-session:${data.generationId}`, nextSessionId);
       setCurrentGenerationId(String(data.generationId || currentGenerationId));
       setCurrentImageUrl(String(data.image || currentImageUrl));
       setMessages((current) => [
@@ -214,6 +216,7 @@ export default function ImageEditChat({
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || 'A szerkesztési előzmények nem tölthetők be.');
       setSessionId(id);
+      window.localStorage.setItem(`v3:image-edit-session:${generationId}`, id);
       setMessages((data.messages || []).map((item: any) => ({
         id: String(item.id),
         role: item.role === 'assistant' ? 'assistant' : 'user',
