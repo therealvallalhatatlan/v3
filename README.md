@@ -642,6 +642,33 @@ This project currently stores assets on the server filesystem and exposes genera
 
 API keys must remain server-side and should never be exposed to client code.
 
+## Conversational image editing
+
+The character workspace now includes a Gemini-powered image editing chat.
+
+The flow is:
+
+`generated image → edit instruction → edited image → next edit`
+
+Each edit is stored as a new generated-image version with a parent link. Gemini 3.1 Flash Image is used through the Interactions API so the edit session can continue with `previous_interaction_id`. When that server-side interaction is no longer available, the application falls back to the current image plus local edit history.
+
+The editor supports:
+
+- localized changes such as removing or adding objects
+- pose and environmental changes
+- adding existing system/user characters during an edit turn
+- adding up to 4 ad-hoc reference images during an edit turn
+- persistent edit-session chat history
+- 1 credit per successful edit
+
+Database setup requires:
+
+```text
+supabase/migrations/20260928_image_edit_chat.sql
+```
+
+The same SQL is also included at the end of `supabase/schema.sql` for fresh installs.
+
 ## Current limitations
 
 This repository is best understood as an evolving generation engine / prototype rather than a finished multi-tenant production platform.
