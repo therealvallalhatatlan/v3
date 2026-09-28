@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getCurrentUser } from '../../../lib/supabase/server';
-import { createSupabaseServerClient } from '../../../lib/supabase/server';
-import { createSupabaseAdminClient } from '../../../lib/supabase/admin';
-import { MEDIA_BUCKET } from '../../../lib/supabase/media';
+import { getCurrentUser } from '../../../../lib/supabase/server';
+import { createSupabaseServerClient } from '../../../../lib/supabase/server';
+import { createSupabaseAdminClient } from '../../../../lib/supabase/admin';
+import { MEDIA_BUCKET } from '../../../../lib/supabase/media';
 
 export async function DELETE(
   _req: Request,
