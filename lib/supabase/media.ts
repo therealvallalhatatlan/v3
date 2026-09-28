@@ -49,6 +49,21 @@ export async function createSignedMediaUrl(path: string, expiresIn = 3600): Prom
   return data.signedUrl;
 }
 
+export async function createSignedMediaUrls(paths: string[], expiresIn = 3600): Promise<Record<string, string>> {
+  const uniquePaths = Array.from(new Set(paths.map((path) => String(path || '').trim()).filter(Boolean)));
+  if (!uniquePaths.length) return {};
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.storage.from(MEDIA_BUCKET).createSignedUrls(uniquePaths, expiresIn);
+  if (error) throw new Error(`Unable to sign media URLs: ${error.message}`);
+
+  const result: Record<string, string> = {};
+  for (const item of data || []) {
+    if (item?.path && item?.signedUrl) result[String(item.path)] = String(item.signedUrl);
+  }
+  return result;
+}
+
 export async function deleteMedia(path: string): Promise<void> {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.storage.from(MEDIA_BUCKET).remove([path]);
