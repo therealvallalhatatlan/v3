@@ -90,7 +90,7 @@ export default function ImageEditChat({
 
     const saved = window.localStorage.getItem(`v3:image-edit-session:${generationId}`);
     if (saved) void loadSession(saved);
-  }, [open, generationId]);
+  }, [open]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
