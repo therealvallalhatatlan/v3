@@ -122,6 +122,7 @@ type PresetCatalogResponse = {
 };
 
 const Gallery = dynamic(() => import('./Gallery'), { ssr: false });
+const ImageEditChat = dynamic(() => import('./ImageEditChat'), { ssr: false });
 const AnimationPanel = dynamic(() => import('./AnimationPanel'), { ssr: false });
 
 function mergeOptions(defaults: PresetOption[], incoming: PresetOption[] | undefined): PresetOption[] {
@@ -183,6 +184,8 @@ export default function CharacterDetailPage() {
   const [result, setResult] = useState<string | null>(null);
   const [compareResult, setCompareResult] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [editChatOpen, setEditChatOpen] = useState(false);
+  const [editGenerationId, setEditGenerationId] = useState<string | null>(null);
   const [generatedImages, setGeneratedImages] = useState<ImageInfo[]>([]);
   const [animatePreselectedUrl, setAnimatePreselectedUrl] = useState('');
   const [generatedReferenceImages, setGeneratedReferenceImages] = useState<Array<{ id: string; path: string; url: string; created: number }>>([]);
@@ -467,7 +470,7 @@ export default function CharacterDetailPage() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Failed to generate image');
-      setResult(data.image); setCompareResult(data.compareImage || null);
+      setResult(data.image); setCompareResult(data.compareImage || null); setEditGenerationId(data.generationId || null);
     } catch (e: any) {
       setError(e?.message || 'Generation failed');
     } finally { setLoading(false); }
@@ -834,10 +837,19 @@ export default function CharacterDetailPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center gap-3">
+                    <div className="flex flex-col items-center gap-3 w-full">
                       <button type="button" className="focus:outline-none rounded" onClick={() => setPreviewImage(result)}>
                         <img src={result} alt="Generated scene" className="rounded shadow-lg max-w-full cursor-zoom-in" />
                       </button>
+                      {editGenerationId && (
+                        <button
+                          type="button"
+                          onClick={() => setEditChatOpen(true)}
+                          className="w-full max-w-xl rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-sm font-semibold text-white hover:border-gray-500 hover:bg-gray-800"
+                        >
+                          ✎ Kép szerkesztése chatben
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -848,6 +860,23 @@ export default function CharacterDetailPage() {
           {activeTab === 'gallery' && <Gallery characterId={primaryCharacterId} onUseForAnimation={handleUseForAnimation} />}
         </div>
       </div>
+
+      {editChatOpen && result && editGenerationId && (
+        <ImageEditChat
+          open={editChatOpen}
+          imageUrl={result}
+          generationId={editGenerationId}
+          primaryCharacterId={primaryCharacterId}
+          characters={allCharacters.map((item) => ({ id: item.id, name: item.name, type: item.type }))}
+          onClose={() => setEditChatOpen(false)}
+          onImageChange={(imageUrl, generationId) => {
+            setResult(imageUrl);
+            setEditGenerationId(generationId);
+            setCompareResult(null);
+            void loadGeneratedImages();
+          }}
+        />
+      )}
 
       {previewImage && <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4" onClick={() => setPreviewImage(null)} role="dialog" aria-modal="true"><div className="relative max-w-6xl w-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}><button type="button" onClick={() => setPreviewImage(null)} className="absolute -top-10 right-0 text-white text-sm bg-gray-800 px-3 py-1 rounded">Close</button><img src={previewImage} alt="Preview" className="max-h-[85vh] max-w-full object-contain rounded shadow-2xl" /></div></div>}
     </main>
