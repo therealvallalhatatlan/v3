@@ -138,7 +138,7 @@ export default function Gallery({ characterId, onEdit }: Props) {
     setShareStatus('');
 
     try {
-      const response = await fetch(`/api/generated/${encodeURIComponent(image.id)}`, {
+      const response = await fetch(`/api/generated-image/${encodeURIComponent(image.id)}`, {
         method: 'DELETE',
       });
       const data = await response.json();
