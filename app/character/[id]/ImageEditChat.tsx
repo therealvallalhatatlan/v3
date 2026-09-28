@@ -142,10 +142,6 @@ export default function ImageEditChat({
     const text = instruction.trim();
     if (!text || loading) return;
 
-    const selectedNames = selectedCharacterIds
-      .map((id) => characters.find((item) => item.id === id)?.name)
-      .filter(Boolean) as string[];
-
     const userMessage: EditMessage = {
       id: newId(),
       role: 'user',
