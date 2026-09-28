@@ -89,14 +89,6 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
   const supabase = await createSupabaseServerClient();
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('plan')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (profileError) return NextResponse.json({ error: 'Unable to load user profile' }, { status: 500 });
-  if (profile?.plan !== 'admin') return NextResponse.json({ error: 'A képszerkesztés jelenleg csak adminoknak érhető el.' }, { status: 403 });
 
   let sessionId = normalizeText(req.nextUrl.searchParams.get('sessionId'), 100);
   const generationId = normalizeText(req.nextUrl.searchParams.get('generationId'), 120);
@@ -192,14 +184,6 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
   const supabase = await createSupabaseServerClient();
-  const { data: adminProfile, error: adminProfileError } = await supabase
-    .from('profiles')
-    .select('plan')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (adminProfileError) return NextResponse.json({ error: 'Unable to load user profile' }, { status: 500 });
-  if (adminProfile?.plan !== 'admin') return NextResponse.json({ error: 'A képszerkesztés jelenleg csak adminoknak érhető el.' }, { status: 403 });
 
   let reserved = 0;
   try {
