@@ -351,7 +351,16 @@ export async function POST(req: NextRequest) {
       profileResult.data.plan === 'free',
     );
 
-    const nextVersion = Number(currentGeneration.edit_index || 0) + 1;
+    const { data: latestVersion } = await supabase
+      .from('generated_images')
+      .select('edit_index')
+      .eq('owner_id', user.id)
+      .eq('edit_session_id', session.id)
+      .order('edit_index', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const nextVersion = Math.max(0, Number(latestVersion?.edit_index || 0)) + 1;
 
     const { error: insertError } = await supabase.from('generated_images').insert({
       id: generationId,
