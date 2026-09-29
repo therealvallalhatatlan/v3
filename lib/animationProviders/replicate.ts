@@ -34,21 +34,21 @@ export class ReplicateAnimationProvider implements AnimationProviderClient {
   private readonly imageKey: string;
   private readonly promptKey: string;
   private readonly durationKey: string;
+  private readonly lastFrameImageKey: string;
 
   constructor() {
     this.apiToken = process.env.REPLICATE_API_TOKEN || '';
-    this.modelReference = process.env.REPLICATE_VIDEO_MODEL_VERSION || '';
+    this.modelReference = process.env.REPLICATE_VIDEO_MODEL_VERSION || 'prunaai/p-video';
     this.apiBaseUrl = process.env.REPLICATE_API_BASE_URL || 'https://api.replicate.com/v1';
     this.imageKey = process.env.REPLICATE_INPUT_IMAGE_KEY || 'image';
     this.promptKey = process.env.REPLICATE_INPUT_PROMPT_KEY || 'prompt';
     this.durationKey = process.env.REPLICATE_INPUT_DURATION_KEY || 'duration';
+    this.lastFrameImageKey = process.env.REPLICATE_INPUT_LAST_FRAME_KEY || 'last_frame_image';
 
     if (!this.apiToken) {
       throw new Error('REPLICATE_API_TOKEN is not set');
     }
-    if (!this.modelReference) {
-      throw new Error('REPLICATE_VIDEO_MODEL_VERSION is not set');
-    }
+
   }
 
   private isModelSlugReference(value: string): boolean {
@@ -84,11 +84,15 @@ export class ReplicateAnimationProvider implements AnimationProviderClient {
   }
 
   async createAnimation(input: ProviderCreateAnimationInput): Promise<ProviderCreateAnimationResult> {
-    const inputPayload = {
+    const inputPayload: Record<string, unknown> = {
       [this.imageKey]: input.sourceImageUrl,
-      [this.promptKey]: input.motionPrompt,
+      [this.promptKey]: input.prompt,
       [this.durationKey]: input.durationSeconds,
     };
+
+    if (input.lastFrameImageUrl) {
+      inputPayload[this.lastFrameImageKey] = input.lastFrameImageUrl;
+    }
 
     const isSlug = this.isModelSlugReference(this.modelReference);
     const payload = isSlug
