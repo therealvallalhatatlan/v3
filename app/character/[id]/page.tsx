@@ -202,6 +202,7 @@ export default function CharacterDetailPage() {
   const [generatedReferenceImages, setGeneratedReferenceImages] = useState<Array<{ id: string; path: string; url: string; created: number }>>([]);
   const [referenceUploading, setReferenceUploading] = useState(false);
   const [referenceError, setReferenceError] = useState('');
+  const [referenceLayerOpen, setReferenceLayerOpen] = useState(false);
 
   const hydratedRef = useRef(false);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -324,7 +325,11 @@ export default function CharacterDetailPage() {
   }, []);
 
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setPreviewImage(null); };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setPreviewImage(null);
+      setReferenceLayerOpen(false);
+    };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
@@ -518,65 +523,33 @@ export default function CharacterDetailPage() {
   return (
     <main className="min-h-screen bg-black text-gray-100 font-mono flex flex-col items-center mt-6">
       <div className="w-full max-w-6xl px-6 md:px-0">
-        <div className="flex justify-between items-center mb-8 gap-4">
+        <div className="mb-8 flex items-center justify-between gap-4">
           <h1 className="text-3xl font-bold tracking-tight">Új jelenet</h1>
-        </div>
-        <div className="bg-zinc-950 rounded-lg border border-gray-800 p-4 mb-4 flex gap-4 items-start">
-          <div className="flex gap-2 shrink-0">{(character.imagePaths || []).slice(0, 1).map((img: string, i: number) => <img key={i} src={img} alt="ref" className="w-24 h-24 object-cover rounded" />)}</div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-3">
-              <div className="font-bold text-xl">{character.name}</div>
-            </div>
-            <div className="text-gray-400 text-sm mb-1 line-clamp-2">{character.description}</div>
-            <div className="text-xs text-gray-500">{character.traits.join(', ')}</div>
-          </div>
-        </div>
 
-      {character.type === 'system' && userPlan === 'admin' && (
-        <section className="mb-6 rounded-xl border border-gray-800 bg-zinc-950 p-4">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <div className="text-[10px] uppercase tracking-[0.25em] text-gray-600">ADMIN / REFERENCIA</div>
-              <h2 className="text-base font-bold text-white">Referenciaképek</h2>
-              <p className="mt-1 text-xs text-gray-500">A Gemini ezekből tanulja meg V megjelenését. Legfeljebb 6 kép használható.</p>
+          <div className="flex min-w-0 items-center justify-end gap-3">
+            <div className="max-w-[220px] truncate text-right text-sm font-semibold text-gray-300">
+              {character.name}
             </div>
-            <div className="text-xs text-gray-600">{generatedReferenceImages.length} / 6 kép</div>
-          </div>
-
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
-            {generatedReferenceImages.map((image, index) => (
-              <div key={image.id || image.path} className="group relative overflow-hidden rounded-lg border border-gray-800 bg-black">
-                <img src={image.url} alt={`V referencia ${index + 1}`} className="aspect-square h-full w-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => handleDeleteReferenceImage(image.id)}
-                  className="absolute right-1.5 top-1.5 hidden rounded-md bg-black/80 px-2 py-1 text-[10px] text-gray-300 group-hover:block hover:bg-red-950 hover:text-red-200"
-                >
-                  Törlés
-                </button>
-              </div>
+            {(character.imagePaths || []).slice(0, 1).map((img: string, i: number) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => {
+                  if (character.type === 'system' && userPlan === 'admin') setReferenceLayerOpen(true);
+                }}
+                disabled={character.type !== 'system' || userPlan !== 'admin'}
+                className={`shrink-0 overflow-hidden rounded-lg border border-gray-800 bg-zinc-950 ${
+                  character.type === 'system' && userPlan === 'admin'
+                    ? 'cursor-pointer transition hover:border-gray-600'
+                    : 'cursor-default'
+                }`}
+                aria-label={character.type === 'system' && userPlan === 'admin' ? 'Referenciaképek megnyitása' : undefined}
+              >
+                <img src={img} alt={character.name || 'Karakter'} className="h-12 w-12 object-cover" />
+              </button>
             ))}
-
-            {generatedReferenceImages.length < 6 && (
-              <label className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-gray-700 bg-black/30 text-center transition hover:border-gray-500 hover:bg-zinc-900">
-                <span className="text-xl text-gray-500">+</span>
-                <span className="mt-1 px-2 text-[10px] text-gray-500">Kép hozzáadása</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={handleReferenceUpload}
-                  disabled={referenceUploading}
-                />
-              </label>
-            )}
           </div>
-
-          {referenceUploading && <div className="mt-3 text-xs text-gray-500">Feltöltés…</div>}
-          {referenceError && <div className="mt-3 rounded-lg border border-red-900 bg-red-950/30 px-3 py-2 text-xs text-red-300">{referenceError}</div>}
-        </section>
-      )}
+        </div>}
 
         <div className="flex gap-1 mb-4 bg-zinc-950 rounded-lg border border-gray-800 p-1">
           {(['generate', 'animate', 'gallery'] as Tab[]).map((tab) => <button key={tab} type="button" onClick={() => setActiveTab(tab)} className={`flex-1 py-2 rounded text-sm font-semibold ${activeTab === tab ? 'bg-zinc-800 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-zinc-800'}`}>{tab === 'generate' ? '✨ ' : tab === 'animate' ? '▶ ' : '🖼 '}{tab === 'generate' ? 'Generálás' : tab === 'animate' ? 'Videó' : 'Galéria'}</button>)}
@@ -927,6 +900,71 @@ export default function CharacterDetailPage() {
             void loadGeneratedImages();
           }}
         />
+      )}
+
+      {referenceLayerOpen && character.type === 'system' && userPlan === 'admin' && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          onClick={() => setReferenceLayerOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reference-layer-title"
+        >
+          <div
+            className="w-full max-w-4xl rounded-xl border border-gray-800 bg-zinc-950 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-4 border-b border-gray-800 px-4 py-3">
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.25em] text-gray-600">ADMIN / REFERENCIA</div>
+                <h2 id="reference-layer-title" className="text-base font-bold text-white">Referenciaképek</h2>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-gray-600">{generatedReferenceImages.length} / 6</span>
+                <button
+                  type="button"
+                  onClick={() => setReferenceLayerOpen(false)}
+                  className="rounded-lg border border-gray-800 px-2.5 py-1.5 text-xs text-gray-400 hover:bg-gray-900 hover:text-white"
+                  aria-label="Referenciaképek bezárása"
+                >
+                  Bezárás
+                </button>
+              </div>
+            </div>
+            <div className="max-h-[75vh] overflow-y-auto p-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
+                {generatedReferenceImages.map((image, index) => (
+                  <div key={image.id || image.path} className="group relative overflow-hidden rounded-lg border border-gray-800 bg-black">
+                    <img src={image.url} alt={`V referencia ${index + 1}`} className="aspect-square h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteReferenceImage(image.id)}
+                      className="absolute right-1.5 top-1.5 hidden rounded-md bg-black/80 px-2 py-1 text-[10px] text-gray-300 group-hover:block hover:bg-red-950 hover:text-red-200"
+                    >
+                      Törlés
+                    </button>
+                  </div>
+                ))}
+                {generatedReferenceImages.length < 6 && (
+                  <label className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-gray-700 bg-black/30 text-center transition hover:border-gray-500 hover:bg-zinc-900">
+                    <span className="text-xl text-gray-500">+</span>
+                    <span className="mt-1 px-2 text-[10px] text-gray-500">Kép hozzáadása</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={handleReferenceUpload}
+                      disabled={referenceUploading}
+                    />
+                  </label>
+                )}
+              </div>
+              {referenceUploading && <div className="mt-3 text-xs text-gray-500">Feltöltés…</div>}
+              {referenceError && <div className="mt-3 rounded-lg border border-red-900 bg-red-950/30 px-3 py-2 text-xs text-red-300">{referenceError}</div>}
+            </div>
+          </div>
+        </div>
       )}
 
       {previewImage && <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4" onClick={() => setPreviewImage(null)} role="dialog" aria-modal="true"><div className="relative max-w-6xl w-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}><button type="button" onClick={() => setPreviewImage(null)} className="absolute -top-10 right-0 text-white text-sm bg-gray-800 px-3 py-1 rounded">Close</button><img src={previewImage} alt="Preview" className="max-h-[85vh] max-w-full object-contain rounded shadow-2xl" /></div></div>}
