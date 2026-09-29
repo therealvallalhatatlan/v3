@@ -71,11 +71,13 @@ export function buildLocationProfileSummary(scene: SceneInput): string {
   lines.push(
     `Specific detail: ${normalizeToPromptEnglish(profile.detail) || 'not provided'}`,
     `Geometry map: ${normalizeToPromptEnglish(profile.geometry) || 'not provided'}`,
-    `Lighting and time: ${normalizeToPromptEnglish(profile.lightingAndTime) || 'not provided'}`,
     `Palette and textures: ${normalizeToPromptEnglish(profile.paletteAndTexture) || 'not provided'}`,
     `Fixed props: ${normalizeToPromptEnglish(profile.fixedProps) || 'not provided'}`,
     `Camera continuity: ${normalizeToPromptEnglish(profile.cameraContinuity) || 'not provided'}`
   );
+  if (!scene.lighting && profile.lightingAndTime) {
+    lines.push(`Legacy lighting and time: ${normalizeToPromptEnglish(profile.lightingAndTime)}`);
+  }
   return lines.join('\n');
 }
 
