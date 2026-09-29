@@ -561,7 +561,7 @@ export default function CharacterDetailPage() {
       )}
 
         <div className="flex gap-1 mb-4 bg-zinc-950 rounded-lg border border-gray-800 p-1">
-          {(['generate', 'gallery'] as Tab[]).map((tab) => <button key={tab} type="button" onClick={() => setActiveTab(tab)} className={`flex-1 py-2 rounded text-sm font-semibold ${activeTab === tab ? 'bg-zinc-800 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-zinc-800'}`}>{tab === 'generate' ? '✨ ' : tab === 'animate' ? '▶ ' : '🖼 '}{tab.charAt(0).toUpperCase() + tab.slice(1)}</button>)}
+          {(['generate', 'animate', 'gallery'] as Tab[]).map((tab) => <button key={tab} type="button" onClick={() => setActiveTab(tab)} className={`flex-1 py-2 rounded text-sm font-semibold ${activeTab === tab ? 'bg-zinc-800 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-zinc-800'}`}>{tab === 'generate' ? '✨ ' : tab === 'animate' ? '▶ ' : '🖼 '}{tab === 'generate' ? 'Generálás' : tab === 'animate' ? 'Videó' : 'Galéria'}</button>)}
         </div>
 
         <div className="bg-zinc-950 rounded-lg">
@@ -855,6 +855,15 @@ export default function CharacterDetailPage() {
                 </div>
               )}
             </>
+          )}
+
+          {activeTab === 'animate' && (
+            <AnimationPanel
+              characterId={primaryCharacterId}
+              images={generatedImages}
+              initialSelectedUrl={animatePreselectedUrl || undefined}
+              characterIds={[primaryCharacterId, ...extraCharacterIds].filter(Boolean)}
+            />
           )}
 
           {activeTab === 'gallery' && (
