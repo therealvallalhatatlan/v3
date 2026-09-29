@@ -8,26 +8,50 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import type { ImageInfo } from './AnimationPanel';
 import type { Character } from '../../../types';
-import type { AspectRatio16x9, LocationPreset, ShotTemplate } from '../../../types/prompt';
+import type { AspectRatio16x9, LocationPreset } from '../../../types/prompt';
+import { LIGHTING_PRESETS } from '../../../lib/lighting';
 
 type PresetOption = { value: string; label: string };
 
 const DEFAULT_CAMERA_OPTIONS: PresetOption[] = [
-  { value: 'close-up', label: 'Close-up' },
-  { value: 'wide', label: 'Wide' },
-  { value: 'fisheye', label: 'Fisheye' },
-  { value: 'handheld', label: 'Handheld (Cinematic Realism)' },
-  { value: 'dutch', label: 'Dutch Angle (Tension)' },
-  { value: 'birdseye', label: "Bird's-Eye (Top-Down)" },
-  { value: 'overtheshoulder', label: 'Over-the-Shoulder (POV Drama)' },
-  { value: 'wormseye', label: "Worm's-Eye (Heroic Low Angle)" },
-  { value: 'speedcam1999', label: 'Rendőrségi Traffipax 1999 (Éjszakai)' },
-  { value: 'security-cam', label: 'Security Camera (Fixed Surveillance)' },
-  { value: 'telephoto-stakeout', label: 'Telephoto Stakeout (Long-Lens Surveillance)' },
-  { value: 'cctv-distorted', label: 'CCTV Fisheye Distortion (Surveillance Archive)' },
-  { value: 'reflection-pov', label: 'Reflection POV (Mirror/Glass Subjective)' },
-  { value: 'macro-forensic', label: 'Macro Forensic Detail (Extreme Close-Up)' },
-  { value: 'pov-dashboard', label: 'Dashboard POV (In-Vehicle First-Person)' },
+  { value: 'closeup', label: 'Közeli · Close-up' },
+  { value: 'extreme-closeup', label: 'Extrém közeli · Extreme Close-up' },
+  { value: 'medium', label: 'Közép · Medium Shot' },
+  { value: 'medium-wide', label: 'Közép-tág · Medium Wide' },
+  { value: 'wide', label: 'Tág · Wide Shot' },
+  { value: 'extreme-wide', label: 'Nagyon tág · Extreme Wide' },
+  { value: 'ultrawide-14mm', label: 'Objektív · 14mm Ultra Wide' },
+  { value: 'wide-24mm', label: 'Objektív · 24mm Wide' },
+  { value: 'environmental-35mm', label: 'Objektív · 35mm Environmental' },
+  { value: 'normal-50mm', label: 'Objektív · 50mm Natural' },
+  { value: 'portrait-85mm', label: 'Objektív · 85mm Portrait' },
+  { value: 'telephoto-135mm', label: 'Objektív · 135mm Telephoto' },
+  { value: 'compressed-telephoto', label: 'Objektív · Erősen komprimált tele' },
+  { value: 'macro', label: 'Objektív · Macro' },
+  { value: 'fisheye', label: 'Optika · Fisheye' },
+  { value: 'tilt-shift', label: 'Optika · Tilt-shift' },
+  { value: 'low-angle', label: 'Nézőpont · Alulról' },
+  { value: 'ground-level', label: 'Nézőpont · Talajszint' },
+  { value: 'wormseye', label: 'Nézőpont · Extrém alulnézet' },
+  { value: 'high-angle', label: 'Nézőpont · Felülről' },
+  { value: 'overhead', label: 'Nézőpont · Merőleges overhead' },
+  { value: 'ceiling-corner', label: 'Nézőpont · Mennyezeti sarok' },
+  { value: 'dutch-angle', label: 'Nézőpont · Dutch angle' },
+  { value: 'profile', label: 'Nézőpont · Tiszta profil' },
+  { value: 'three-quarter-profile', label: 'Nézőpont · Háromnegyed profil' },
+  { value: 'over-shoulder', label: 'Filmes · Over-the-Shoulder' },
+  { value: 'subjective-pov', label: 'Filmes · Szubjektív POV' },
+  { value: 'rear-three-quarter', label: 'Filmes · Hátulról 3/4' },
+  { value: 'foreground-obstructed', label: 'Filmes · Előtérrel kitakart' },
+  { value: 'doorway-peek', label: 'Filmes · Ajtófélfán túlról' },
+  { value: 'through-glass', label: 'Filmes · Üvegen keresztül' },
+  { value: 'reflection', label: 'Filmes · Tükör / tükröződés' },
+  { value: 'dashboard-pov', label: 'Filmes · Műszerfal POV' },
+  { value: 'corner-wide', label: 'Kompozíció · Sarokból tág' },
+  { value: 'centered-symmetry', label: 'Kompozíció · Középtengely' },
+  { value: 'off-axis', label: 'Kompozíció · Tengelyen kívül' },
+  { value: 'long-corridor', label: 'Kompozíció · Hosszú perspektíva' },
+  { value: 'surrounding-subject', label: 'Kompozíció · Körbezáró tér' },
 ];
 
 const DEFAULT_STYLE_OPTIONS: PresetOption[] = [
@@ -61,22 +85,13 @@ const DEFAULT_LOCATION_OPTIONS: PresetOption[] = [
   { value: 'hotel-courtyard-pool-cocktail-bar', label: 'Szálloda belső udvara úszómedencével és koktélbárral' },
 ];
 
-const SHOT_TEMPLATE_OPTIONS: Array<{ value: ShotTemplate; label: string }> = [
-  { value: 'establishing-wide', label: 'Establishing Wide' },
-  { value: 'medium-dialogue', label: 'Medium Dialogue' },
-  { value: 'closeup-emotion', label: 'Close-up Emotion' },
-  { value: 'over-shoulder', label: 'Over-Shoulder' },
-  { value: 'insert-detail', label: 'Insert Detail' },
-  { value: 'tracking-motion', label: 'Tracking Motion' },
-];
-
 const ASPECT_RATIO_OPTIONS: Array<{ value: AspectRatio16x9; label: string }> = [
   { value: 'landscape-16-9', label: 'Fekvő 16:9' },
   { value: 'portrait-9-16', label: 'Álló 9:16' },
 ];
 
 const LOCATION_HISTORY_KEY = 'illustration.location.history';
-const MOOD_HISTORY_KEY = 'illustration.mood.history';
+const LIGHTING_HISTORY_KEY = 'illustration.lighting.history';
 const GENERATE_FORM_VERSION = 'v1';
 const CHAR_FORM_KEY_PREFIX = `illustration.generate.form.${GENERATE_FORM_VERSION}.character`;
 const CHAR_PRESETS_KEY_PREFIX = `illustration.generate.presets.${GENERATE_FORM_VERSION}.character`;
@@ -92,7 +107,6 @@ const GLOBAL_DEFAULT_PRESET_KEY = `illustration.generate.defaultPreset.${GENERAT
   locationPalette: string;
   locationProps: string;
   locationCameraContinuity: string;
-  shotTemplate: ShotTemplate;
   lockGeometry: boolean;
   lockLighting: boolean;
   lockPalette: boolean;
@@ -208,22 +222,23 @@ export default function CharacterDetailPage() {
   };
 
   const createFormSnapshot = (): GenerateFormState => ({
-    location, mood, locationPreset, locationGeometry, locationLighting, locationPalette, locationProps,
-    locationCameraContinuity, shotTemplate, lockGeometry, lockLighting, lockPalette, lockProps, lockCameraRules,
+    location, lighting: mood, locationPreset, locationGeometry, locationLighting, locationPalette, locationProps,
+    locationCameraContinuity, lockGeometry, lockLighting, lockPalette, lockProps, lockCameraRules,
     continuityNotes, actionPrompt, extraCharacterIds, aliasMap, camera, aspectRatio, style, styleIntensity,
     compareMode, compareStyle,
   });
 
   const applyFormSnapshot = (snapshot: Partial<GenerateFormState>) => {
     if (typeof snapshot.location === 'string') setLocation(snapshot.location);
-    if (typeof snapshot.mood === 'string') setMood(snapshot.mood);
+    if (typeof (snapshot as any).lighting === 'string') setMood((snapshot as any).lighting);
+    else if (typeof (snapshot as any).mood === 'string') setMood((snapshot as any).mood);
     if (typeof snapshot.locationPreset === 'string') setLocationPreset(snapshot.locationPreset);
     if (typeof snapshot.locationGeometry === 'string') setLocationGeometry(snapshot.locationGeometry);
     if (typeof snapshot.locationLighting === 'string') setLocationLighting(snapshot.locationLighting);
     if (typeof snapshot.locationPalette === 'string') setLocationPalette(snapshot.locationPalette);
     if (typeof snapshot.locationProps === 'string') setLocationProps(snapshot.locationProps);
     if (typeof snapshot.locationCameraContinuity === 'string') setLocationCameraContinuity(snapshot.locationCameraContinuity);
-    if (typeof snapshot.shotTemplate === 'string') setShotTemplate(snapshot.shotTemplate as ShotTemplate);
+
     if (typeof snapshot.lockGeometry === 'boolean') setLockGeometry(snapshot.lockGeometry);
     if (typeof snapshot.lockLighting === 'boolean') setLockLighting(snapshot.lockLighting);
     if (typeof snapshot.lockPalette === 'boolean') setLockPalette(snapshot.lockPalette);
@@ -349,9 +364,9 @@ export default function CharacterDetailPage() {
   useEffect(() => {
     try {
       const savedLocation = JSON.parse(localStorage.getItem(LOCATION_HISTORY_KEY) || '[]');
-      const savedMood = JSON.parse(localStorage.getItem(MOOD_HISTORY_KEY) || '[]');
+      const savedLighting = JSON.parse(localStorage.getItem(LIGHTING_HISTORY_KEY) || localStorage.getItem('illustration.mood.history') || '[]');
       if (Array.isArray(savedLocation)) setLocationHistory(savedLocation.filter((item) => typeof item === 'string'));
-      if (Array.isArray(savedMood)) setMoodHistory(savedMood.filter((item) => typeof item === 'string'));
+      if (Array.isArray(savedLighting)) setMoodHistory(savedLighting.filter((item) => typeof item === 'string'));
     } catch {}
   }, []);
 
@@ -363,7 +378,7 @@ export default function CharacterDetailPage() {
       setStorageInfo('Auto-saved current form.');
     }, 300);
     return () => { if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current); };
-  }, [primaryCharacterId, location, mood, locationPreset, locationGeometry, locationLighting, locationPalette, locationProps, locationCameraContinuity, shotTemplate, lockGeometry, lockLighting, lockPalette, lockProps, lockCameraRules, continuityNotes, actionPrompt, extraCharacterIds, aliasMap, camera, aspectRatio, style, styleIntensity, compareMode, compareStyle]);
+  }, [primaryCharacterId, location, mood, locationPreset, locationGeometry, locationLighting, locationPalette, locationProps, locationCameraContinuity, lockGeometry, lockLighting, lockPalette, lockProps, lockCameraRules, continuityNotes, actionPrompt, extraCharacterIds, aliasMap, camera, aspectRatio, style, styleIntensity, compareMode, compareStyle]);
 
   const loadGeneratedImages = async () => {
     if (!primaryCharacterId) return;
@@ -450,10 +465,17 @@ export default function CharacterDetailPage() {
     setState(next); localStorage.setItem(key, JSON.stringify(next));
   };
 
+  const applyLightingPreset = (value: string) => {
+    const preset = LIGHTING_PRESETS.find((item) => item.value === value);
+    if (!preset) return;
+    setMood(preset.prompt);
+    persistHistoryValue(LIGHTING_HISTORY_KEY, preset.prompt, moodHistory, setMoodHistory);
+  };
+
   const handleGenerate = async (event: React.FormEvent) => {
     event.preventDefault();
     persistHistoryValue(LOCATION_HISTORY_KEY, location, locationHistory, setLocationHistory);
-    persistHistoryValue(MOOD_HISTORY_KEY, mood, moodHistory, setMoodHistory);
+    persistHistoryValue(LIGHTING_HISTORY_KEY, mood, moodHistory, setMoodHistory);
     setLoading(true); setError(''); setResult(null); setCompareResult(null);
     try {
       const characterIds = [primaryCharacterId, ...extraCharacterIds].filter(Boolean);
@@ -463,8 +485,8 @@ export default function CharacterDetailPage() {
       const response = await fetch('/api/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          characterId: primaryCharacterId, characterIds, aliasMap: selectedAliasMap, location, mood, actionPrompt,
-          scenePackage: { locationProfile: { preset: locationPreset, detail: location, geometry: locationGeometry, lightingAndTime: locationLighting, paletteAndTexture: locationPalette, fixedProps: locationProps, cameraContinuity: locationCameraContinuity }, continuity: { lockGeometry, lockLighting, lockPalette, lockProps, lockCameraRules, notes: continuityNotes.trim() || undefined }, shotTemplate, bilingualInput: { sourceLanguage: 'mixed' } },
+          characterId: primaryCharacterId, characterIds, aliasMap: selectedAliasMap, location, lighting: mood, actionPrompt,
+          scenePackage: { locationProfile: { preset: locationPreset, detail: location, geometry: locationGeometry, lightingAndTime: locationLighting, paletteAndTexture: locationPalette, fixedProps: locationProps, cameraContinuity: locationCameraContinuity }, continuity: { lockGeometry, lockLighting, lockPalette, lockProps, lockCameraRules, notes: continuityNotes.trim() || undefined }, bilingualInput: { sourceLanguage: 'mixed' } },
           camera, aspectRatio, style, styleIntensity, compareStyle: compareStylePayload,
         }),
       });
@@ -574,27 +596,56 @@ export default function CharacterDetailPage() {
               )}
 
               <form onSubmit={handleGenerate} className="mb-8 space-y-4">
-                <div>
-                  <label className="block mb-1 text-sm font-semibold text-gray-300">Helyszín</label>
+                <div className="space-y-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <label className="text-sm font-semibold text-gray-300">Helyszín</label>
+                    <select
+                      className="w-full sm:w-auto sm:min-w-[280px] rounded bg-gray-900 border border-gray-700 p-2 text-sm"
+                      value={locationPreset}
+                      onChange={(e) => setLocationPreset(e.target.value)}
+                      aria-label="Helyszín preset"
+                    >
+                      {locationPresetOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                    </select>
+                  </div>
                   <textarea
                     className="w-full p-3 rounded bg-gray-900 border border-gray-700 text-sm"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     rows={3}
-                    placeholder="Hol történjen a jelenet?"
+                    placeholder="Hol történjen a jelenet? A preset az alap környezetet adja, ezt itt pontosíthatod."
                   />
                 </div>
 
-                <div>
-                  <label className="block mb-1 text-sm font-semibold text-gray-300">Hangulat</label>
+                <div className="space-y-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <label className="text-sm font-semibold text-gray-300">Fények, világítás</label>
+                    <select
+                      className="w-full sm:w-auto sm:min-w-[280px] rounded bg-gray-900 border border-gray-700 p-2 text-sm"
+                      defaultValue=""
+                      onChange={(e) => {
+                        applyLightingPreset(e.target.value);
+                        e.currentTarget.value = '';
+                      }}
+                      aria-label="Világítás preset"
+                    >
+                      <option value="">Világítás preset választása…</option>
+                      {LIGHTING_PRESETS.map((preset) => (
+                        <option key={preset.value} value={preset.value}>{preset.label}</option>
+                      ))}
+                    </select>
+                  </div>
                   <input
                     className="w-full p-3 rounded bg-gray-900 border border-gray-700 text-sm"
                     value={mood}
                     onChange={(e) => setMood(e.target.value)}
-                    list="mood-history"
-                    placeholder="Pl. feszült, nyugodt, kaotikus…"
+                    list="lighting-history"
+                    placeholder="Pl. hajnal, hideg szórt ablakfény, felülről érkező kemény fény…"
                   />
-                  <datalist id="mood-history">{moodHistory.map((item) => <option key={item} value={item} />)}</datalist>
+                  <datalist id="lighting-history">{moodHistory.map((item) => <option key={item} value={item} />)}</datalist>
+                  <div className="text-[11px] leading-5 text-gray-600">
+                    A preset csak kiindulópont. A mezőbe szabadon írhatsz saját világítási leírást is.
+                  </div>
                 </div>
 
                 <div>
@@ -692,23 +743,12 @@ export default function CharacterDetailPage() {
                 </div>
 
                 <div>
-                  <label className="block mb-1 text-sm font-semibold text-gray-300">Helyszín preset</label>
-                  <select className="w-full p-3 rounded bg-gray-900 border border-gray-700 text-sm" value={locationPreset} onChange={(e) => setLocationPreset(e.target.value)}>
-                    {locationPresetOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block mb-1 text-sm font-semibold text-gray-300">Kamera</label>
+                  <div className="mb-1 flex items-baseline justify-between gap-3">
+                    <label className="text-sm font-semibold text-gray-300">Kamera</label>
+                    <span className="text-[10px] text-gray-600">objektív · nézőpont · látószög · perspektíva</span>
+                  </div>
                   <select className="w-full p-3 rounded bg-gray-900 border border-gray-700 text-sm" value={camera} onChange={(e) => setCamera(e.target.value)}>
                     {cameraOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block mb-1 text-sm font-semibold text-gray-300">Shot template</label>
-                  <select className="w-full p-3 rounded bg-gray-900 border border-gray-700 text-sm" value={shotTemplate} onChange={(e) => setShotTemplate(e.target.value as ShotTemplate)}>
-                    {SHOT_TEMPLATE_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                   </select>
                 </div>
 
