@@ -7,6 +7,10 @@ import { createSupabaseBrowserClient } from '../../lib/supabase/client';
 
 type Account = {
   authenticated: boolean;
+  user?: {
+    id?: string;
+    email?: string | null;
+  };
   plan?: 'free' | 'paid' | 'admin';
   generationCredits?: number;
 };
@@ -67,11 +71,25 @@ export default function TopNav() {
         </nav>
 
         {account?.authenticated && (
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-xs text-gray-500">{account.generationCredits ?? 0} kredit</span>
-            <button type="button" onClick={handleSignOut} className="rounded-lg border border-gray-800 px-3 py-2 text-xs text-gray-400 hover:bg-gray-900 hover:text-white">
-              Kilépés
-            </button>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            {account.user?.email && (
+              <span
+                className="max-w-[220px] truncate text-[9px] leading-none text-gray-600"
+                title={account.user.email}
+              >
+                Üdv az oldalon {account.user.email}
+              </span>
+            )}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">{account.generationCredits ?? 0} kredit</span>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="rounded-lg border border-gray-800 px-3 py-2 text-xs text-gray-400 hover:bg-gray-900 hover:text-white"
+              >
+                Kilépés
+              </button>
+            </div>
           </div>
         )}
       </div>
