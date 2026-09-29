@@ -186,21 +186,24 @@ When an aspect ratio is selected, the storage layer normalizes the image to:
 
 Images and their generation metadata are then saved to the filesystem.
 
-### Image-to-video animation
+### Image-to-video generation
 
-The animation subsystem uses **Replicate** as its provider.
+The video subsystem uses **Pruna AI P-Video** through Replicate.
 
-A generated image can be submitted with:
+A generated gallery image can be used as the required first frame. An optional second gallery image can be supplied as the last frame. The video prompt controls the motion and camera behavior, while the source image itself determines the output canvas ratio. No separate aspect-ratio control is exposed in the video UI.
 
-- Motion prompt
-- Duration
-- Character context
+The current UI keeps the main controls intentionally small:
 
-Animation jobs are persisted locally and expose statuses such as:
+- First frame from Gallery
+- Optional last frame from Gallery
+- Motion / video prompt
+- Duration: 5, 8, 10, 15 or 20 seconds
+
+Video jobs are persisted locally and expose statuses such as:
 
 `queued`, `processing`, `done`, `failed`, `canceled`
 
-The implementation also supports polling a provider prediction, downloading/saving the resulting MP4, and canceling an active job through the API layer.
+The implementation polls Replicate predictions, downloads the completed MP4 to local storage when possible, and supports canceling an active job.
 
 ## Tech stack
 
@@ -269,7 +272,7 @@ For animation:
 
 ```env
 REPLICATE_API_TOKEN=your_replicate_token
-REPLICATE_VIDEO_MODEL_VERSION=owner/model-or-version
+REPLICATE_VIDEO_MODEL_VERSION=prunaai/p-video
 ```
 
 Optional Replicate configuration:
@@ -279,6 +282,7 @@ REPLICATE_API_BASE_URL=https://api.replicate.com/v1
 REPLICATE_INPUT_IMAGE_KEY=image
 REPLICATE_INPUT_PROMPT_KEY=prompt
 REPLICATE_INPUT_DURATION_KEY=duration
+REPLICATE_INPUT_LAST_FRAME_KEY=last_frame_image
 ```
 
 ### Environment variable reference
@@ -288,7 +292,8 @@ REPLICATE_INPUT_DURATION_KEY=duration
 | `GEMINI_API_KEY` | Yes | Google Gemini image-generation API key |
 | `STORAGE_DIR` | Yes in a normal setup | Root directory for characters, reference images, generated images, animation files, and custom presets |
 | `REPLICATE_API_TOKEN` | Only for video | Replicate authentication token |
-| `REPLICATE_VIDEO_MODEL_VERSION` | Only for video | Replicate model slug (`owner/name`) or model version identifier |
+| `REPLICATE_VIDEO_MODEL_VERSION` | Optional for video | Replicate model slug (`owner/name`) or model version identifier. Defaults to `prunaai/p-video`. |
+| `REPLICATE_INPUT_LAST_FRAME_KEY` | No | Input field name for the optional last-frame image. Defaults to `last_frame_image`. |
 | `REPLICATE_API_BASE_URL` | No | Replicate API base URL override |
 | `REPLICATE_INPUT_IMAGE_KEY` | No | Input field name expected by the selected Replicate model |
 | `REPLICATE_INPUT_PROMPT_KEY` | No | Prompt field name expected by the selected Replicate model |
