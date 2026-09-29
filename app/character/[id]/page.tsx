@@ -549,7 +549,7 @@ export default function CharacterDetailPage() {
               </button>
             ))}
           </div>
-        </div>}
+        </div>
 
         <div className="flex gap-1 mb-4 bg-zinc-950 rounded-lg border border-gray-800 p-1">
           {(['generate', 'animate', 'gallery'] as Tab[]).map((tab) => <button key={tab} type="button" onClick={() => setActiveTab(tab)} className={`flex-1 py-2 rounded text-sm font-semibold ${activeTab === tab ? 'bg-zinc-800 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-zinc-800'}`}>{tab === 'generate' ? '✨ ' : tab === 'animate' ? '▶ ' : '🖼 '}{tab === 'generate' ? 'Generálás' : tab === 'animate' ? 'Videó' : 'Galéria'}</button>)}
