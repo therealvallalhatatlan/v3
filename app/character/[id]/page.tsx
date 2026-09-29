@@ -10,7 +10,6 @@ import type { ImageInfo } from './AnimationPanel';
 import type { Character } from '../../../types';
 import type { AspectRatio16x9, LocationPreset } from '../../../types/prompt';
 import { LIGHTING_PRESETS } from '../../../lib/lighting';
-import { LIGHTING_PRESETS } from '../../../lib/lighting';
 
 type PresetOption = { value: string; label: string };
 
@@ -178,7 +177,7 @@ export default function CharacterDetailPage() {
   const [aliasMap, setAliasMap] = useState<Record<string, string>>({});
   const [locationHistory, setLocationHistory] = useState<string[]>([]);
   const [lightingHistory, setLightingHistory] = useState<string[]>([]);
-  const [camera, setCamera] = useState('close-up');
+  const [camera, setCamera] = useState('medium');
   const [aspectRatio, setAspectRatio] = useState<AspectRatio16x9>('landscape-16-9');
   const [style, setStyle] = useState('gritty');
   const [styleIntensity, setStyleIntensity] = useState(65);
