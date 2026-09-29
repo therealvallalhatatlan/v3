@@ -39,9 +39,11 @@ const HU_TO_EN_GLOSSARY: Array<[RegExp, string]> = [
   [/f[aá]sult/gi, 'fatigued mood'],
 ];
 
-export function mapMood(input: string): string {
-  const key = input.toLowerCase();
-  return MOOD_MAP[key] || input;
+export function mapMood(input?: string): string {
+  const value = String(input || '').trim();
+  if (!value) return '';
+  const key = value.toLowerCase();
+  return MOOD_MAP[key] || value;
 }
 
 export function normalizeToPromptEnglish(input: string): string {
@@ -114,7 +116,9 @@ function buildFramingBlock(scene: SceneInput): string {
 export function buildSceneBlock(scene: SceneInput): string {
   const cast = scene.castAliases && scene.castAliases.length > 1 ? scene.castAliases.join(', ') : null;
   const actionLine = scene.actionPrompt ? `Action prompt: ${scene.actionPrompt}` : 'Action prompt: not provided';
-  return `\n[SCENE]\nLocation:\n${buildLocationProfileSummary(scene)}\nMood: ${normalizeToPromptEnglish(mapMood(scene.mood))}\n${actionLine}\n\n${buildFramingBlock(scene)}\n\n${buildShotTemplateBlock(scene)}\n\n${buildContinuityBlock(scene)}\n\n[INTERACTION]\n${cast ? `Characters ${cast} are naturally integrated into the scene, with believable spacing and body language` : 'Character is naturally integrated into the scene, not posing artificially'}\n`;
+  const lightingText = scene.lighting || scene.scenePackage?.locationProfile?.lightingAndTime || '';
+  const lightingLine = lightingText ? `Lighting: ${normalizeToPromptEnglish(lightingText)}` : 'Lighting: not provided';
+  return `\n[SCENE]\nLocation:\n${buildLocationProfileSummary(scene)}\n${lightingLine}\n${actionLine}\n\n${buildFramingBlock(scene)}\n\n${buildShotTemplateBlock(scene)}\n\n${buildContinuityBlock(scene)}\n\n[INTERACTION]\n${cast ? `Characters ${cast} are naturally integrated into the scene, with believable spacing and body language` : 'Character is naturally integrated into the scene, not posing artificially'}\n`;
 }
 
 export { MOOD_MAP };
