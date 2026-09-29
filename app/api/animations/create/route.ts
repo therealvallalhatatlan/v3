@@ -8,9 +8,8 @@ import path from 'path';
 
 function normalizeDuration(value: unknown): number {
   const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed === -1) return -1;
-  const clamped = Math.max(4, Math.min(15, Math.round(parsed)));
-  return clamped;
+  if (!Number.isFinite(parsed)) return 5;
+  return Math.max(1, Math.min(20, Math.round(parsed)));
 }
 
 function extensionToMime(filePath: string): string {
@@ -41,17 +40,32 @@ function resolveLocalSourceToDataUrl(sourceImageUrl: string): string {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { characterId, characterIds, duoKey, sourceImageUrl, motionPrompt, durationSeconds } = body;
+    const {
+      characterId,
+      characterIds,
+      duoKey,
+      sourceImageUrl,
+      lastFrameImageUrl,
+      prompt,
+      motionPrompt,
+      durationSeconds,
+    } = body;
 
-    if (!characterId || !sourceImageUrl || !motionPrompt) {
+    const resolvedPrompt = typeof prompt === 'string' ? prompt : motionPrompt;
+
+    if (!characterId || !sourceImageUrl || !resolvedPrompt) {
       return NextResponse.json(
-        { error: 'characterId, sourceImageUrl and motionPrompt are required' },
+        { error: 'characterId, sourceImageUrl and prompt are required' },
         { status: 400 }
       );
     }
 
-    if (typeof motionPrompt !== 'string' || motionPrompt.trim().length < 4) {
-      return NextResponse.json({ error: 'motionPrompt is too short' }, { status: 400 });
+    if (typeof resolvedPrompt !== 'string' || resolvedPrompt.trim().length < 4) {
+      return NextResponse.json({ error: 'prompt is too short' }, { status: 400 });
+    }
+
+    if (lastFrameImageUrl !== undefined && typeof lastFrameImageUrl !== 'string') {
+      return NextResponse.json({ error: 'lastFrameImageUrl must be a string when provided' }, { status: 400 });
     }
 
     const character = getCharacterById(characterId);
@@ -66,10 +80,14 @@ export async function POST(req: NextRequest) {
     const jobId = crypto.randomUUID();
 
     const providerSourceImage = resolveLocalSourceToDataUrl(sourceImageUrl);
+    const providerLastFrameImage = lastFrameImageUrl?.trim()
+      ? resolveLocalSourceToDataUrl(lastFrameImageUrl.trim())
+      : undefined;
 
     const created = await provider.createAnimation({
       sourceImageUrl: providerSourceImage,
-      motionPrompt: motionPrompt.trim(),
+      lastFrameImageUrl: providerLastFrameImage,
+      prompt: resolvedPrompt.trim(),
       durationSeconds: duration,
     });
 
@@ -80,7 +98,12 @@ export async function POST(req: NextRequest) {
       duoKey: typeof duoKey === 'string' ? duoKey : undefined,
       sourceImageUrl,
       sourceImagePath: sourceImageUrl.replace('/api', ''),
-      motionPrompt: motionPrompt.trim(),
+      lastFrameImageUrl: lastFrameImageUrl?.trim() || undefined,
+      lastFrameImagePath: lastFrameImageUrl?.trim()
+        ? lastFrameImageUrl.trim().replace('/api', '')
+        : undefined,
+      prompt: resolvedPrompt.trim(),
+      motionPrompt: resolvedPrompt.trim(),
       durationSeconds: duration,
       provider: providerName,
       status: created.status === 'done' ? 'processing' : created.status,
