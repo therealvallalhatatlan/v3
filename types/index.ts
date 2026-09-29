@@ -14,7 +14,9 @@ export interface SceneRequest {
   characterIds?: string[];
   aliasMap?: Record<string, string>;
   location: string;
-  mood: string;
+  lighting?: string;
+  /** @deprecated Use lighting instead. */
+  mood?: string;
   camera: string;
   aspectRatio?: 'landscape-16-9' | 'portrait-9-16';
   actionPrompt?: string;
@@ -37,7 +39,7 @@ export interface SceneRequest {
       lockCameraRules: boolean;
       notes?: string;
     };
-    shotTemplate: string;
+    shotTemplate?: string;
     bilingualInput?: {
       sourceLanguage: 'hu' | 'en' | 'mixed';
     };
