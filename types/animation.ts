@@ -9,7 +9,11 @@ export type AnimationJob = {
   duoKey?: string;
   sourceImageUrl: string;
   sourceImagePath: string;
-  motionPrompt: string;
+  lastFrameImageUrl?: string;
+  lastFrameImagePath?: string;
+  prompt: string;
+  /** @deprecated Kept so older locally persisted animation jobs still deserialize. */
+  motionPrompt?: string;
   durationSeconds: number;
   provider: AnimationProvider;
   status: AnimationStatus;
