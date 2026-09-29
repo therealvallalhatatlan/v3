@@ -62,7 +62,7 @@ function getShareUrl(url: string) {
   return url;
 }
 
-export default function Gallery({ characterId, onEdit }: Props) {
+export default function Gallery({ characterId, onUseForAnimation, onEdit }: Props) {
   const [images, setImages] = useState<ImageInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -308,10 +308,11 @@ export default function Gallery({ characterId, onEdit }: Props) {
 
                 <button
                   type="button"
-                  disabled
-                  title="Animálás hamarosan elérhető"
-                  aria-label="Animálás hamarosan elérhető"
-                  className="inline-flex min-h-10 cursor-not-allowed items-center justify-center rounded-lg border border-gray-800 px-3 py-2 text-gray-600 opacity-80"
+                  onClick={() => onUseForAnimation?.(img.url)}
+                  disabled={!onUseForAnimation}
+                  title="Videó készítése ebből a képből"
+                  aria-label="Videó készítése ebből a képből"
+                  className="inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-700 px-3 py-2 text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900 disabled:cursor-not-allowed disabled:border-gray-800 disabled:text-gray-600"
                 >
                   <Icon name="play" />
                 </button>
