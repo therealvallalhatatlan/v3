@@ -2,9 +2,9 @@ import { LocationPreset, SceneInput, ShotTemplate } from '../types/prompt';
 import { getPreset, getPresetsByType } from './presetStore';
 
 const MOOD_MAP: Record<string, string> = {
-  paras: 'tense, paranoid atmosphere, dim lighting, unease',
-  szetesett: 'chaotic, disoriented, unstable framing, motion blur',
-  euforikus: 'intense, surreal glow, heightened contrast',
+  paras: 'tense, paranoid atmosphere, unease',
+  szetesett: 'chaotic, disoriented atmosphere',
+  euforikus: 'intense, euphoric atmosphere',
 };
 
 export const LOCATION_PRESET_MAP: Record<string, string> = Object.fromEntries(
