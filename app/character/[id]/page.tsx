@@ -10,6 +10,7 @@ import type { ImageInfo } from './AnimationPanel';
 import type { Character } from '../../../types';
 import type { AspectRatio16x9, LocationPreset } from '../../../types/prompt';
 import { LIGHTING_PRESETS } from '../../../lib/lighting';
+import { LIGHTING_PRESETS } from '../../../lib/lighting';
 
 type PresetOption = { value: string; label: string };
 
@@ -100,10 +101,9 @@ const GLOBAL_DEFAULT_PRESET_KEY = `illustration.generate.defaultPreset.${GENERAT
 
  type GenerateFormState = {
   location: string;
-  mood: string;
+  lighting: string;
   locationPreset: string;
   locationGeometry: string;
-  locationLighting: string;
   locationPalette: string;
   locationProps: string;
   locationCameraContinuity: string;
@@ -160,14 +160,12 @@ export default function CharacterDetailPage() {
   const [locationPresetOptions, setLocationPresetOptions] = useState(DEFAULT_LOCATION_OPTIONS);
 
   const [location, setLocation] = useState('');
-  const [mood, setMood] = useState('');
+  const [lighting, setLighting] = useState('');
   const [locationPreset, setLocationPreset] = useState<LocationPreset>('urban-street');
   const [locationGeometry, setLocationGeometry] = useState('');
-  const [locationLighting, setLocationLighting] = useState('');
   const [locationPalette, setLocationPalette] = useState('');
   const [locationProps, setLocationProps] = useState('');
   const [locationCameraContinuity, setLocationCameraContinuity] = useState('');
-  const [shotTemplate, setShotTemplate] = useState<ShotTemplate>('establishing-wide');
   const [lockGeometry, setLockGeometry] = useState(true);
   const [lockLighting, setLockLighting] = useState(true);
   const [lockPalette, setLockPalette] = useState(true);
@@ -179,7 +177,7 @@ export default function CharacterDetailPage() {
   const [pendingCharacterId, setPendingCharacterId] = useState('');
   const [aliasMap, setAliasMap] = useState<Record<string, string>>({});
   const [locationHistory, setLocationHistory] = useState<string[]>([]);
-  const [moodHistory, setMoodHistory] = useState<string[]>([]);
+  const [lightingHistory, setLightingHistory] = useState<string[]>([]);
   const [camera, setCamera] = useState('close-up');
   const [aspectRatio, setAspectRatio] = useState<AspectRatio16x9>('landscape-16-9');
   const [style, setStyle] = useState('gritty');
@@ -222,7 +220,7 @@ export default function CharacterDetailPage() {
   };
 
   const createFormSnapshot = (): GenerateFormState => ({
-    location, lighting: mood, locationPreset, locationGeometry, locationLighting, locationPalette, locationProps,
+    location, lighting, locationPreset, locationGeometry, locationPalette, locationProps,
     locationCameraContinuity, lockGeometry, lockLighting, lockPalette, lockProps, lockCameraRules,
     continuityNotes, actionPrompt, extraCharacterIds, aliasMap, camera, aspectRatio, style, styleIntensity,
     compareMode, compareStyle,
@@ -230,11 +228,10 @@ export default function CharacterDetailPage() {
 
   const applyFormSnapshot = (snapshot: Partial<GenerateFormState>) => {
     if (typeof snapshot.location === 'string') setLocation(snapshot.location);
-    if (typeof (snapshot as any).lighting === 'string') setMood((snapshot as any).lighting);
-    else if (typeof (snapshot as any).mood === 'string') setMood((snapshot as any).mood);
+    if (typeof (snapshot as any).lighting === 'string') setLighting((snapshot as any).lighting);
+    else if (typeof (snapshot as any).mood === 'string') setLighting((snapshot as any).mood);
     if (typeof snapshot.locationPreset === 'string') setLocationPreset(snapshot.locationPreset);
     if (typeof snapshot.locationGeometry === 'string') setLocationGeometry(snapshot.locationGeometry);
-    if (typeof snapshot.locationLighting === 'string') setLocationLighting(snapshot.locationLighting);
     if (typeof snapshot.locationPalette === 'string') setLocationPalette(snapshot.locationPalette);
     if (typeof snapshot.locationProps === 'string') setLocationProps(snapshot.locationProps);
     if (typeof snapshot.locationCameraContinuity === 'string') setLocationCameraContinuity(snapshot.locationCameraContinuity);
@@ -366,7 +363,7 @@ export default function CharacterDetailPage() {
       const savedLocation = JSON.parse(localStorage.getItem(LOCATION_HISTORY_KEY) || '[]');
       const savedLighting = JSON.parse(localStorage.getItem(LIGHTING_HISTORY_KEY) || localStorage.getItem('illustration.mood.history') || '[]');
       if (Array.isArray(savedLocation)) setLocationHistory(savedLocation.filter((item) => typeof item === 'string'));
-      if (Array.isArray(savedLighting)) setMoodHistory(savedLighting.filter((item) => typeof item === 'string'));
+      if (Array.isArray(savedLighting)) setLightingHistory(savedLighting.filter((item) => typeof item === 'string'));
     } catch {}
   }, []);
 
@@ -378,7 +375,7 @@ export default function CharacterDetailPage() {
       setStorageInfo('Auto-saved current form.');
     }, 300);
     return () => { if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current); };
-  }, [primaryCharacterId, location, mood, locationPreset, locationGeometry, locationLighting, locationPalette, locationProps, locationCameraContinuity, lockGeometry, lockLighting, lockPalette, lockProps, lockCameraRules, continuityNotes, actionPrompt, extraCharacterIds, aliasMap, camera, aspectRatio, style, styleIntensity, compareMode, compareStyle]);
+  }, [primaryCharacterId, location, lighting, locationPreset, locationGeometry, locationPalette, locationProps, locationCameraContinuity, lockGeometry, lockLighting, lockPalette, lockProps, lockCameraRules, continuityNotes, actionPrompt, extraCharacterIds, aliasMap, camera, aspectRatio, style, styleIntensity, compareMode, compareStyle]);
 
   const loadGeneratedImages = async () => {
     if (!primaryCharacterId) return;
@@ -468,14 +465,14 @@ export default function CharacterDetailPage() {
   const applyLightingPreset = (value: string) => {
     const preset = LIGHTING_PRESETS.find((item) => item.value === value);
     if (!preset) return;
-    setMood(preset.prompt);
-    persistHistoryValue(LIGHTING_HISTORY_KEY, preset.prompt, moodHistory, setMoodHistory);
+    setLighting(preset.prompt);
+    persistHistoryValue(LIGHTING_HISTORY_KEY, preset.prompt, lightingHistory, setLightingHistory);
   };
 
   const handleGenerate = async (event: React.FormEvent) => {
     event.preventDefault();
     persistHistoryValue(LOCATION_HISTORY_KEY, location, locationHistory, setLocationHistory);
-    persistHistoryValue(LIGHTING_HISTORY_KEY, mood, moodHistory, setMoodHistory);
+    persistHistoryValue(LIGHTING_HISTORY_KEY, lighting, lightingHistory, setLightingHistory);
     setLoading(true); setError(''); setResult(null); setCompareResult(null);
     try {
       const characterIds = [primaryCharacterId, ...extraCharacterIds].filter(Boolean);
@@ -485,8 +482,8 @@ export default function CharacterDetailPage() {
       const response = await fetch('/api/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          characterId: primaryCharacterId, characterIds, aliasMap: selectedAliasMap, location, lighting: mood, actionPrompt,
-          scenePackage: { locationProfile: { preset: locationPreset, detail: location, geometry: locationGeometry, lightingAndTime: locationLighting, paletteAndTexture: locationPalette, fixedProps: locationProps, cameraContinuity: locationCameraContinuity }, continuity: { lockGeometry, lockLighting, lockPalette, lockProps, lockCameraRules, notes: continuityNotes.trim() || undefined }, bilingualInput: { sourceLanguage: 'mixed' } },
+          characterId: primaryCharacterId, characterIds, aliasMap: selectedAliasMap, location, lighting, actionPrompt,
+          scenePackage: { locationProfile: { preset: locationPreset, detail: location, geometry: locationGeometry, lightingAndTime: lighting, paletteAndTexture: locationPalette, fixedProps: locationProps, cameraContinuity: locationCameraContinuity }, continuity: { lockGeometry, lockLighting, lockPalette, lockProps, lockCameraRules, notes: continuityNotes.trim() || undefined }, bilingualInput: { sourceLanguage: 'mixed' } },
           camera, aspectRatio, style, styleIntensity, compareStyle: compareStylePayload,
         }),
       });
@@ -637,12 +634,12 @@ export default function CharacterDetailPage() {
                   </div>
                   <input
                     className="w-full p-3 rounded bg-gray-900 border border-gray-700 text-sm"
-                    value={mood}
-                    onChange={(e) => setMood(e.target.value)}
+                    value={lighting}
+                    onChange={(e) => setLighting(e.target.value)}
                     list="lighting-history"
                     placeholder="Pl. hajnal, hideg szórt ablakfény, felülről érkező kemény fény…"
                   />
-                  <datalist id="lighting-history">{moodHistory.map((item) => <option key={item} value={item} />)}</datalist>
+                  <datalist id="lighting-history">{lightingHistory.map((item) => <option key={item} value={item} />)}</datalist>
                   <div className="text-[11px] leading-5 text-gray-600">
                     A preset csak kiindulópont. A mezőbe szabadon írhatsz saját világítási leírást is.
                   </div>
@@ -795,10 +792,6 @@ export default function CharacterDetailPage() {
                           <div>
                             <label className="block mb-1 text-sm font-semibold text-gray-300">Geometria</label>
                             <textarea className="w-full p-2 rounded bg-gray-900 border border-gray-700 text-sm" value={locationGeometry} onChange={(e) => setLocationGeometry(e.target.value)} rows={2} />
-                          </div>
-                          <div>
-                            <label className="block mb-1 text-sm font-semibold text-gray-300">Világítás és idő</label>
-                            <textarea className="w-full p-2 rounded bg-gray-900 border border-gray-700 text-sm" value={locationLighting} onChange={(e) => setLocationLighting(e.target.value)} rows={2} />
                           </div>
                           <div>
                             <label className="block mb-1 text-sm font-semibold text-gray-300">Paletta és textúra</label>
