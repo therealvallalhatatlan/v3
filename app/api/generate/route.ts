@@ -57,8 +57,8 @@ function simpleHash(input: string): string {
 function normalizeScenePackage(raw: any): ScenePackageInput | undefined {
   if (!raw || typeof raw !== 'object' || !raw.locationProfile || typeof raw.locationProfile !== 'object') return undefined;
   const presetRaw = String(raw.locationProfile.preset || '').trim() as LocationPreset;
-  const shotTemplateRaw = String(raw.shotTemplate || '').trim() as ShotTemplate;
-  if (!getPreset('location', presetRaw) || !ALLOWED_SHOT_TEMPLATES.includes(shotTemplateRaw)) return undefined;
+  const shotTemplateRaw = String(raw.shotTemplate || 'establishing-wide').trim() as ShotTemplate;
+  if (!getPreset('location', presetRaw)) return undefined;
   const locationProfile = {
     preset: presetRaw,
     detail: normalizeText(raw.locationProfile.detail, 600),
@@ -101,7 +101,8 @@ export async function POST(req: NextRequest) {
     currentUserId = user.id;
 
     const data = await req.json();
-    const { characterId, characterIds, aliasMap, location, mood, actionPrompt, camera, aspectRatio, style, styleIntensity, compareStyle, textOnly, scenePackage } = data;
+    const { characterId, characterIds, aliasMap, location, lighting, mood, actionPrompt, camera, aspectRatio, style, styleIntensity, compareStyle, textOnly, scenePackage } = data;
+    const lightingText = normalizeText(typeof lighting === 'string' ? lighting : mood, 500);
     const normalizedCharacterIds = Array.from(new Set([...(Array.isArray(characterIds) ? characterIds : []), characterId].map((id) => String(id || '').trim()).filter(Boolean)));
     if (normalizedCharacterIds.length === 0) return NextResponse.json({ error: 'characterId or characterIds is required' }, { status: 400 });
     const loadedCharacters = await Promise.all(normalizedCharacterIds.map((id) => getAppCharacterById(id, true)));
@@ -137,7 +138,7 @@ export async function POST(req: NextRequest) {
         preset: String(scenePackage?.locationProfile?.preset || 'urban-street').trim(),
         detail: normalizeText(location, 800),
         geometry: '',
-        lightingAndTime: '',
+        lightingAndTime: lightingText,
         paletteAndTexture: '',
         fixedProps: '',
         cameraContinuity: '',
@@ -153,6 +154,9 @@ export async function POST(req: NextRequest) {
       bilingualInput: { sourceLanguage: 'mixed' as const },
     };
     const normalizedScenePackage = normalizeScenePackage(isPaid ? scenePackage : freeScenePackage);
+    if (normalizedScenePackage && lightingText) {
+      normalizedScenePackage.locationProfile.lightingAndTime = lightingText;
+    }
     const cameraKeyForUser = cameraKey;
     const resolvedLocation = resolveLocationText(location, normalizedScenePackage);
 
@@ -164,7 +168,8 @@ export async function POST(req: NextRequest) {
 
     const scene: SceneInput = {
       location: resolvedLocation,
-      mood: normalizeToPromptEnglish(String(mood || '').trim()),
+      lighting: normalizeToPromptEnglish(lightingText),
+      mood: undefined,
       actionPrompt: typeof actionPrompt === 'string' ? actionPrompt.trim() : undefined,
       castAliases,
       scenePackage: normalizedScenePackage,
@@ -176,7 +181,7 @@ export async function POST(req: NextRequest) {
     };
 
     const locationFingerprintSource = normalizedScenePackage
-      ? JSON.stringify({ profile: normalizedScenePackage.locationProfile, continuity: normalizedScenePackage.continuity, shotTemplate: normalizedScenePackage.shotTemplate })
+      ? JSON.stringify({ profile: normalizedScenePackage.locationProfile, continuity: normalizedScenePackage.continuity })
       : resolvedLocation;
     const locationFingerprint = `loc-${simpleHash(locationFingerprintSource)}`;
     scene.locationFingerprint = locationFingerprint;
