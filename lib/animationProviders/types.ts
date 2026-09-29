@@ -1,6 +1,7 @@
 export type ProviderCreateAnimationInput = {
   sourceImageUrl: string;
-  motionPrompt: string;
+  lastFrameImageUrl?: string;
+  prompt: string;
   durationSeconds: number;
 };
 
