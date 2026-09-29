@@ -17,7 +17,9 @@ export type AspectRatio16x9 = 'landscape-16-9' | 'portrait-9-16';
 
 export type SceneInput = {
   location: string;
-  mood: string;
+  lighting?: string;
+  /** @deprecated Use lighting instead. Kept for backwards-compatible prompt input. */
+  mood?: string;
   actionPrompt?: string;
   castAliases?: string[];
   scenePackage?: ScenePackageInput;
@@ -52,6 +54,7 @@ export type ScenePackageInput = {
   locationProfileId?: string;
   locationProfile: LocationProfile;
   continuity: LocationContinuity;
-  shotTemplate: ShotTemplate;
+  /** @deprecated Camera presets now define framing. Kept only for persisted/legacy scene packages. */
+  shotTemplate?: ShotTemplate;
   bilingualInput?: { sourceLanguage: 'hu' | 'en' | 'mixed' };
 };
