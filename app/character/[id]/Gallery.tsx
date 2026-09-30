@@ -88,18 +88,14 @@ export default function Gallery({ characterId, onUseForAnimation, onEdit }: Prop
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const PAGE_SIZE = 12;
-  const totalPages = Math.max(1, Math.ceil(images.length / PAGE_SIZE));
-  const pageStart = (currentPage - 1) * PAGE_SIZE;
   const galleryItems: GalleryItem[] = [
     ...images.map((data) => ({ kind: 'image' as const, data })),
     ...videos.map((data) => ({ kind: 'video' as const, data })),
   ].sort((a, b) => b.data.created - a.data.created);
-
   const totalPages = Math.max(1, Math.ceil(galleryItems.length / PAGE_SIZE));
   const pageStart = (currentPage - 1) * PAGE_SIZE;
   const pageItems = galleryItems.slice(pageStart, pageStart + PAGE_SIZE);
   const selectedItem = selectedIndex === null ? null : galleryItems[selectedIndex] ?? null;
-
   const loadGallery = () => {
     setLoading(true);
     Promise.all([
@@ -333,89 +329,71 @@ export default function Gallery({ characterId, onUseForAnimation, onEdit }: Prop
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-        {pageImages.map((img, index) => {
+        {pageItems.map((item, index) => {
           const absoluteIndex = pageStart + index;
+          if (item.kind === 'video') {
+            const video = item.data;
+            return (
+              <article key={`video-${video.id}`} className="overflow-hidden rounded-xl border border-gray-800 bg-zinc-900/80 shadow-lg">
+                <button
+                  type="button"
+                  onClick={() => setSelectedIndex(absoluteIndex)}
+                  className="group relative block aspect-video w-full overflow-hidden bg-black focus:outline-none focus:ring-2 focus:ring-white/70"
+                  aria-label="Videó megnyitása"
+                >
+                  <video
+                    src={video.url}
+                    poster={video.sourceImageUrl}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    className="h-full w-full object-contain"
+                    onClick={(event) => event.stopPropagation()}
+                  />
+                  <span className="pointer-events-none absolute left-3 top-3 rounded-full border border-white/20 bg-black/75 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white">VIDEÓ</span>
+                </button>
+
+                <div className="grid grid-cols-3 gap-2 border-t border-gray-800 bg-zinc-950 p-3">
+                  <a href={video.url} download title="Videó letöltése" aria-label="Videó letöltése" className="inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-700 px-3 py-2 text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900">
+                    <Icon name="download" />
+                  </a>
+                  <button type="button" onClick={() => { setSelectedIndex(absoluteIndex); setModal('info'); setShareStatus(''); }} title="Info" aria-label="Videó infó" className="inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-700 px-3 py-2 text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900">
+                    <Icon name="info" />
+                  </button>
+                  <button type="button" onClick={() => setSelectedIndex(absoluteIndex)} title="Megnyitás" aria-label="Videó megnyitása" className="inline-flex min-h-10 items-center justify-center rounded-lg bg-white px-3 py-2 text-black transition hover:bg-gray-200">
+                    <Icon name="play" />
+                  </button>
+                </div>
+              </article>
+            );
+          }
+
+          const img = item.data;
           return (
             <article key={img.id || img.filename} className="overflow-hidden rounded-xl border border-gray-800 bg-zinc-900/80 shadow-lg">
-              <button
-                type="button"
-                onClick={() => setSelectedIndex(absoluteIndex)}
-                className={`group block w-full ${imageAreaClass(img)} overflow-hidden bg-black focus:outline-none focus:ring-2 focus:ring-white/70`}
-                aria-label="Kép nagy méretű megnyitása"
-              >
-                <img
-                  src={img.url}
-                  alt={img.filename}
-                  className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.01]"
-                />
+              <button type="button" onClick={() => setSelectedIndex(absoluteIndex)} className={`group block w-full ${imageAreaClass(img)} overflow-hidden bg-black focus:outline-none focus:ring-2 focus:ring-white/70`} aria-label="Kép nagy méretű megnyitása">
+                <img src={img.url} alt={img.filename} className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.01]" />
               </button>
 
               <div className={`grid grid-cols-3 gap-2 border-t border-gray-800 bg-zinc-950 p-3 ${onEdit ? 'sm:grid-cols-6' : 'sm:grid-cols-5'}`}>
-                <a
-                  href={img.url}
-                  download
-                  title="Letöltés"
-                  aria-label="Letöltés"
-                  className="inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-700 px-3 py-2 text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900"
-                >
+                <a href={img.url} download title="Letöltés" aria-label="Letöltés" className="inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-700 px-3 py-2 text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900">
                   <Icon name="download" />
                 </a>
-
                 {onEdit && img.id && (
-                  <button
-                    type="button"
-                    onClick={() => onEdit({ id: img.id!, url: img.url })}
-                    title="Szerkesztés"
-                    aria-label="Szerkesztés"
-                    className="inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-700 px-3 py-2 text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900"
-                  >
+                  <button type="button" onClick={() => onEdit({ id: img.id!, url: img.url })} title="Szerkesztés" aria-label="Szerkesztés" className="inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-700 px-3 py-2 text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900">
                     <Icon name="edit" />
                   </button>
                 )}
-
-                <button
-                  type="button"
-                  onClick={() => onUseForAnimation?.(img.url)}
-                  disabled={!onUseForAnimation}
-                  title="Videó készítése ebből a képből"
-                  aria-label="Videó készítése ebből a képből"
-                  className="inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-700 px-3 py-2 text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900 disabled:cursor-not-allowed disabled:border-gray-800 disabled:text-gray-600"
-                >
+                <button type="button" onClick={() => onUseForAnimation?.(img.url)} disabled={!onUseForAnimation} title="Videó készítése ebből a képből" aria-label="Videó készítése ebből a képből" className="inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-700 px-3 py-2 text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900 disabled:cursor-not-allowed disabled:border-gray-800 disabled:text-gray-600">
                   <Icon name="play" />
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedIndex(absoluteIndex);
-                    setModal('info');
-                    setShareStatus('');
-                  }}
-                  title="Info"
-                  aria-label="Info"
-                  className="inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-700 px-3 py-2 text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900"
-                >
+                <button type="button" onClick={() => { setSelectedIndex(absoluteIndex); setModal('info'); setShareStatus(''); }} title="Info" aria-label="Info" className="inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-700 px-3 py-2 text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900">
                   <Icon name="info" />
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => openShare(absoluteIndex)}
-                  title="Megosztás"
-                  aria-label="Megosztás"
-                  className="inline-flex min-h-10 items-center justify-center rounded-lg bg-white px-3 py-2 text-black shadow-md transition hover:bg-gray-200 hover:shadow-lg"
-                >
+                <button type="button" onClick={() => openShare(absoluteIndex)} title="Megosztás" aria-label="Megosztás" className="inline-flex min-h-10 items-center justify-center rounded-lg bg-white px-3 py-2 text-black shadow-md transition hover:bg-gray-200 hover:shadow-lg">
                   <Icon name="share" />
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => void deleteImage(img)}
-                  disabled={!img.id || deletingId === img.id}
-                  title="Törlés"
-                  aria-label="Törlés"
-                  className="inline-flex min-h-10 items-center justify-center rounded-lg border border-red-900/70 px-3 py-2 text-red-300 transition hover:border-red-700 hover:bg-red-950/40 disabled:cursor-not-allowed disabled:opacity-50"
-                >
+                <button type="button" onClick={() => void deleteImage(img)} disabled={!img.id || deletingId === img.id} title="Törlés" aria-label="Törlés" className="inline-flex min-h-10 items-center justify-center rounded-lg border border-red-900/70 px-3 py-2 text-red-300 transition hover:border-red-700 hover:bg-red-950/40 disabled:cursor-not-allowed disabled:opacity-50">
                   <Icon name="trash" />
                 </button>
               </div>
@@ -425,7 +403,7 @@ export default function Gallery({ characterId, onUseForAnimation, onEdit }: Prop
       </div>
 
       <div className="mt-5 flex items-center justify-between text-xs text-gray-400">
-        <div>{pageImages.length} / {images.length} kép megjelenítve</div>
+        <div>{pageItems.length} / {galleryItems.length} elem megjelenítve</div>
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))} disabled={currentPage <= 1} className="rounded border border-gray-700 px-2 py-1 transition hover:border-gray-500 disabled:cursor-not-allowed disabled:opacity-40">Előző</button>
           <button type="button" onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))} disabled={currentPage >= totalPages} className="rounded border border-gray-700 px-2 py-1 transition hover:border-gray-500 disabled:cursor-not-allowed disabled:opacity-40">Következő</button>
