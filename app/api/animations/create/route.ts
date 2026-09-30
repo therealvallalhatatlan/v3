@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAnimationProvider } from '../../../../lib/animationProviders';
-import { getCharacterById, saveAnimationJob } from '../../../../lib/storage';
+import { saveAnimationJob } from '../../../../lib/storage';
+import { getAppCharacterById } from '../../../../lib/supabase/characters';
 import { AnimationJob } from '../../../../types/animation';
 import { getStoragePath } from '../../../../lib/paths';
 import fs from 'fs';
@@ -68,7 +69,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'lastFrameImageUrl must be a string when provided' }, { status: 400 });
     }
 
-    const character = getCharacterById(characterId);
+    // Characters are now stored in Supabase. The old local JSON storage no longer
+    // contains the system character records (including V), so do not use
+    // lib/storage.getCharacterById() here.
+    const character = await getAppCharacterById(String(characterId).trim(), false);
     if (!character) {
       return NextResponse.json({ error: 'Character not found' }, { status: 404 });
     }
