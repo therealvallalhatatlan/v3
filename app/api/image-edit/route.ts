@@ -4,7 +4,7 @@ import { getCurrentUser } from '../../../lib/supabase/server';
 import { createSupabaseServerClient } from '../../../lib/supabase/server';
 import { getAppCharacterById } from '../../../lib/supabase/characters';
 import { downloadAsDataUrl, createSignedMediaUrl } from '../../../lib/supabase/media';
-import { saveGeneratedImageToSupabase } from '../../../lib/supabase/generation';
+import { saveGeneratedImageToSupabase, shouldAddWatermark } from '../../../lib/supabase/generation';
 import { generateImageInteraction, GeminiImageInput } from '../../../lib/geminiInteractions';
 import { buildFallbackEditPrompt, buildImageEditPrompt, IMAGE_EDIT_SYSTEM_INSTRUCTION } from '../../../lib/imageEditPrompt';
 
@@ -352,7 +352,7 @@ export async function POST(req: NextRequest) {
       user.id,
       generationId,
       currentGeneration.aspect_ratio === 'portrait-9-16' ? 'portrait-9-16' : 'landscape-16-9',
-      profileResult.data.plan === 'free',
+      shouldAddWatermark(profileResult.data.plan),
     );
 
     const { data: latestVersion } = await supabase
