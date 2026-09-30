@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAnimationProvider } from '../../../../lib/animationProviders';
-import { saveAnimationJob } from '../../../../lib/storage';
+import { getCurrentUser } from '../../../../lib/supabase/server';
 import { getAppCharacterById } from '../../../../lib/supabase/characters';
-import { AnimationJob } from '../../../../types/animation';
-import { getStoragePath } from '../../../../lib/paths';
-import fs from 'fs';
-import path from 'path';
+import { createVideoJob, updateVideoJob } from '../../../../lib/supabase/videoJobs';
 
 function normalizeDuration(value: unknown): number {
   const parsed = Number(value);
@@ -13,32 +10,22 @@ function normalizeDuration(value: unknown): number {
   return Math.max(1, Math.min(20, Math.round(parsed)));
 }
 
-function extensionToMime(filePath: string): string {
-  const ext = path.extname(filePath).toLowerCase();
-  if (ext === '.png') return 'image/png';
-  if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
-  if (ext === '.webp') return 'image/webp';
-  return 'image/png';
-}
-
 function resolveLocalSourceToDataUrl(sourceImageUrl: string): string {
+  // Legacy/local image URLs are still accepted for backwards compatibility.
+  // Current Gallery images use signed Supabase URLs and pass through unchanged.
   if (!sourceImageUrl.startsWith('/api/generated/')) {
     return sourceImageUrl;
   }
 
-  const relPart = sourceImageUrl.replace('/api/generated/', '');
-  const relPath = path.join('generated', ...relPart.split('/'));
-  const fullPath = getStoragePath(relPath);
-  if (!fs.existsSync(fullPath)) {
-    throw new Error('Source image file not found on storage');
-  }
-
-  const mimeType = extensionToMime(fullPath);
-  const base64 = fs.readFileSync(fullPath).toString('base64');
-  return `data:${mimeType};base64,${base64}`;
+  throw new Error('Legacy local source images are no longer available on this deployment.');
 }
 
 export async function POST(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+  }
+
   try {
     const body = await req.json();
     const {
@@ -52,12 +39,13 @@ export async function POST(req: NextRequest) {
       durationSeconds,
     } = body;
 
+    const normalizedCharacterId = String(characterId || '').trim();
     const resolvedPrompt = typeof prompt === 'string' ? prompt : motionPrompt;
 
-    if (!characterId || !sourceImageUrl || !resolvedPrompt) {
+    if (!normalizedCharacterId || !sourceImageUrl || !resolvedPrompt) {
       return NextResponse.json(
         { error: 'characterId, sourceImageUrl and prompt are required' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -66,13 +54,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (lastFrameImageUrl !== undefined && typeof lastFrameImageUrl !== 'string') {
-      return NextResponse.json({ error: 'lastFrameImageUrl must be a string when provided' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'lastFrameImageUrl must be a string when provided' },
+        { status: 400 },
+      );
     }
 
-    // Characters are now stored in Supabase. The old local JSON storage no longer
-    // contains the system character records (including V), so do not use
-    // lib/storage.getCharacterById() here.
-    const character = await getAppCharacterById(String(characterId).trim(), false);
+    const character = await getAppCharacterById(normalizedCharacterId, false);
     if (!character) {
       return NextResponse.json({ error: 'Character not found' }, { status: 404 });
     }
@@ -80,53 +68,87 @@ export async function POST(req: NextRequest) {
     const providerName = 'replicate';
     const provider = getAnimationProvider(providerName);
     const duration = normalizeDuration(durationSeconds);
-    const now = Date.now();
-    const jobId = crypto.randomUUID();
+    const normalizedCharacterIds = Array.isArray(characterIds)
+      ? Array.from(
+          new Set(
+            characterIds
+              .map((id: unknown) => String(id || '').trim())
+              .filter(Boolean),
+          ),
+        )
+      : [normalizedCharacterId];
 
-    const providerSourceImage = resolveLocalSourceToDataUrl(sourceImageUrl);
-    const providerLastFrameImage = lastFrameImageUrl?.trim()
-      ? resolveLocalSourceToDataUrl(lastFrameImageUrl.trim())
-      : undefined;
-
-    const created = await provider.createAnimation({
-      sourceImageUrl: providerSourceImage,
-      lastFrameImageUrl: providerLastFrameImage,
+    let job = await createVideoJob({
+      userId: user.id,
+      characterId: normalizedCharacterId,
+      characterIds: normalizedCharacterIds,
+      duoKey: typeof duoKey === 'string' ? duoKey.trim() || undefined : undefined,
+      sourceImageUrl: String(sourceImageUrl),
+      lastFrameImageUrl:
+        typeof lastFrameImageUrl === 'string' && lastFrameImageUrl.trim()
+          ? lastFrameImageUrl.trim()
+          : undefined,
       prompt: resolvedPrompt.trim(),
-      durationSeconds: duration,
-    });
-
-    const job: AnimationJob = {
-      jobId,
-      characterId,
-      characterIds: Array.isArray(characterIds) ? characterIds.filter((id: unknown) => typeof id === 'string' && id.trim()) : undefined,
-      duoKey: typeof duoKey === 'string' ? duoKey : undefined,
-      sourceImageUrl,
-      sourceImagePath: sourceImageUrl.replace('/api', ''),
-      lastFrameImageUrl: lastFrameImageUrl?.trim() || undefined,
-      lastFrameImagePath: lastFrameImageUrl?.trim()
-        ? lastFrameImageUrl.trim().replace('/api', '')
-        : undefined,
-      prompt: resolvedPrompt.trim(),
-      motionPrompt: resolvedPrompt.trim(),
       durationSeconds: duration,
       provider: providerName,
-      status: created.status === 'done' ? 'processing' : created.status,
-      externalJobId: created.externalJobId,
-      createdAt: now,
-      updatedAt: now,
-      startedAt: now,
-    };
+    });
 
-    saveAnimationJob(job);
+    try {
+      const providerSourceImage = resolveLocalSourceToDataUrl(String(sourceImageUrl));
+      const providerLastFrameImage =
+        typeof lastFrameImageUrl === 'string' && lastFrameImageUrl.trim()
+          ? resolveLocalSourceToDataUrl(lastFrameImageUrl.trim())
+          : undefined;
 
-    return NextResponse.json(
-      {
-        jobId: job.jobId,
-        characterId: job.characterId,
-        status: job.status,
-      },
-      { status: 202 }
-    );
+      const created = await provider.createAnimation({
+        sourceImageUrl: providerSourceImage,
+        lastFrameImageUrl: providerLastFrameImage,
+        prompt: resolvedPrompt.trim(),
+        durationSeconds: duration,
+      });
+
+      const updated = await updateVideoJob(
+        user.id,
+        normalizedCharacterId,
+        job.jobId,
+        {
+          external_job_id: created.externalJobId,
+          status: created.status,
+          started_at: new Date().toISOString(),
+        },
+      );
+
+      if (!updated) {
+        throw new Error('Video job disappeared after provider creation');
+      }
+
+      job = await import('../../../../lib/supabase/videoJobs').then(({ toAnimationJob }) =>
+        toAnimationJob(updated),
+      );
+
+      return NextResponse.json(
+        {
+          jobId: job.jobId,
+          characterId: job.characterId,
+          status: job.status,
+          externalJobId: job.externalJobId,
+        },
+        { status: 202 },
+      );
+    } catch (providerError: any) {
+      await updateVideoJob(
+        user.id,
+        normalizedCharacterId,
+        job.jobId,
+        {
+          status: 'failed',
+          error: providerError?.message || 'Failed to create provider job',
+          completed_at: new Date().toISOString(),
+        },
+      ).catch(() => undefined);
+
+      throw providerError;
+    }
   } catch (e: any) {
     const status = Number(e?.status);
     const message = String(e?.message || 'Failed to create animation');
@@ -137,7 +159,7 @@ export async function POST(req: NextRequest) {
           error:
             'Replicate credit elfogyott. Toltse fel a billing egyenleget: https://replicate.com/account/billing#billing',
         },
-        { status: 402 }
+        { status: 402 },
       );
     }
 
