@@ -1,37 +1,66 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAnimationProvider } from '../../../../../../lib/animationProviders';
-import { getAnimationJob, updateAnimationJob } from '../../../../../../lib/storage';
+import { getCurrentUser } from '../../../../../../lib/supabase/server';
+import {
+  getClientAnimationJob,
+  getVideoJob,
+  updateVideoJob,
+} from '../../../../../../lib/supabase/videoJobs';
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { characterId: string; jobId: string } }
+  { params }: { params: { characterId: string; jobId: string } },
 ) {
-  const { characterId, jobId } = params;
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+  }
+
+  const characterId = String(params.characterId || '').trim();
+  const jobId = String(params.jobId || '').trim();
+
   if (!characterId || !jobId) {
-    return NextResponse.json({ error: 'Missing characterId or jobId' }, { status: 400 });
-  }
-
-  const job = getAnimationJob(characterId, jobId);
-  if (!job) {
-    return NextResponse.json({ error: 'Animation job not found' }, { status: 404 });
-  }
-
-  if (!job.externalJobId) {
-    return NextResponse.json({ error: 'Animation job has no provider job id' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Missing characterId or jobId' },
+      { status: 400 },
+    );
   }
 
   try {
-    const provider = getAnimationProvider(job.provider);
-    await provider.cancelAnimation(job.externalJobId);
+    const job = await getVideoJob(user.id, characterId, jobId);
+    if (!job) {
+      return NextResponse.json({ error: 'Animation job not found' }, { status: 404 });
+    }
 
-    const updated = updateAnimationJob(characterId, jobId, {
+    if (job.status === 'done' || job.status === 'failed' || job.status === 'canceled') {
+      return NextResponse.json({ job: await getClientAnimationJob(job) });
+    }
+
+    if (!job.external_job_id) {
+      const canceled = await updateVideoJob(user.id, characterId, jobId, {
+        status: 'canceled',
+        error: null,
+        completed_at: new Date().toISOString(),
+      });
+
+      return NextResponse.json({ job: await getClientAnimationJob(canceled || job) });
+    }
+
+    const provider = getAnimationProvider(job.provider as 'replicate');
+    await provider.cancelAnimation(job.external_job_id);
+
+    const updated = await updateVideoJob(user.id, characterId, jobId, {
       status: 'canceled',
-      completedAt: Date.now(),
-      error: undefined,
+      completed_at: new Date().toISOString(),
+      error: null,
     });
 
-    return NextResponse.json({ job: updated });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Failed to cancel animation' }, { status: 500 });
+    return NextResponse.json({ job: await getClientAnimationJob(updated || job) });
+  } catch (error: any) {
+    console.error('Video cancel error:', error);
+    return NextResponse.json(
+      { error: error?.message || 'Failed to cancel animation' },
+      { status: 500 },
+    );
   }
 }
