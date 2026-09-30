@@ -19,6 +19,21 @@ interface ImageInfo {
   meta?: ImageMeta | null;
 }
 
+interface VideoInfo {
+  id: string;
+  filename: string;
+  url: string;
+  created: number;
+  sourceImageUrl?: string;
+  durationSeconds: number;
+  prompt?: string;
+  status: 'done' | 'failed' | 'canceled' | 'queued' | 'processing';
+}
+
+type GalleryItem =
+  | { kind: 'image'; data: ImageInfo }
+  | { kind: 'video'; data: VideoInfo };
+
 interface Props {
   characterId: string;
   onUseForAnimation?: (url: string) => void;
@@ -64,6 +79,7 @@ function getShareUrl(url: string) {
 
 export default function Gallery({ characterId, onUseForAnimation, onEdit }: Props) {
   const [images, setImages] = useState<ImageInfo[]>([]);
+  const [videos, setVideos] = useState<VideoInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [modal, setModal] = useState<Modal>(null);
@@ -74,20 +90,46 @@ export default function Gallery({ characterId, onUseForAnimation, onEdit }: Prop
   const PAGE_SIZE = 12;
   const totalPages = Math.max(1, Math.ceil(images.length / PAGE_SIZE));
   const pageStart = (currentPage - 1) * PAGE_SIZE;
-  const pageImages = images.slice(pageStart, pageStart + PAGE_SIZE);
-  const selectedImage = selectedIndex === null ? null : images[selectedIndex] ?? null;
+  const galleryItems: GalleryItem[] = [
+    ...images.map((data) => ({ kind: 'image' as const, data })),
+    ...videos.map((data) => ({ kind: 'video' as const, data })),
+  ].sort((a, b) => b.data.created - a.data.created);
 
-  const loadImages = () => {
+  const totalPages = Math.max(1, Math.ceil(galleryItems.length / PAGE_SIZE));
+  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const pageItems = galleryItems.slice(pageStart, pageStart + PAGE_SIZE);
+  const selectedItem = selectedIndex === null ? null : galleryItems[selectedIndex] ?? null;
+
+  const loadGallery = () => {
     setLoading(true);
-    fetch(`/api/generated/${characterId}/list`)
-      .then((res) => res.json())
-      .then((data) => setImages(data.images || []))
-      .catch(() => setImages([]))
+    Promise.all([
+      fetch(`/api/generated/${characterId}/list`).then((res) => res.json()).catch(() => ({ images: [] })),
+      fetch(`/api/animations/${characterId}/list`).then((res) => res.json()).catch(() => ({ jobs: [] })),
+    ])
+      .then(([imageData, videoData]) => {
+        setImages(Array.isArray(imageData?.images) ? imageData.images : []);
+        setVideos(
+          Array.isArray(videoData?.jobs)
+            ? videoData.jobs
+                .filter((job: any) => job?.status === 'done' && typeof job?.videoUrl === 'string' && job.videoUrl)
+                .map((job: any): VideoInfo => ({
+                  id: String(job.jobId),
+                  filename: `video-${job.jobId}.mp4`,
+                  url: String(job.videoUrl),
+                  created: Number(job.createdAt) || Date.now(),
+                  sourceImageUrl: typeof job.sourceImageUrl === 'string' ? job.sourceImageUrl : undefined,
+                  durationSeconds: Number(job.durationSeconds) || 0,
+                  prompt: typeof job.prompt === 'string' ? job.prompt : job.motionPrompt,
+                  status: job.status,
+                }))
+            : [],
+        );
+      })
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
-    loadImages();
+    loadGallery();
   }, [characterId]);
 
   useEffect(() => setCurrentPage(1), [characterId]);
@@ -103,18 +145,18 @@ export default function Gallery({ characterId, onUseForAnimation, onEdit }: Prop
         setSelectedIndex(null);
         return;
       }
-      if (selectedIndex === null || images.length === 0 || modal) return;
+      if (selectedIndex === null || galleryItems.length === 0 || modal) return;
       if (event.key === 'ArrowRight') {
-        setSelectedIndex((prev) => (prev === null ? 0 : (prev + 1) % images.length));
+        setSelectedIndex((prev) => (prev === null ? 0 : (prev + 1) % galleryItems.length));
       }
       if (event.key === 'ArrowLeft') {
-        setSelectedIndex((prev) => (prev === null ? 0 : (prev - 1 + images.length) % images.length));
+        setSelectedIndex((prev) => (prev === null ? 0 : (prev - 1 + galleryItems.length) % galleryItems.length));
       }
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selectedIndex, images.length, modal]);
+  }, [selectedIndex, galleryItems.length, modal]);
 
   const closeAll = () => {
     setModal(null);
@@ -161,6 +203,9 @@ export default function Gallery({ characterId, onUseForAnimation, onEdit }: Prop
       setDeletingId(null);
     }
   };
+
+  const selectedImage = selectedItem?.kind === 'image' ? selectedItem.data : null;
+  const selectedVideo = selectedItem?.kind === 'video' ? selectedItem.data : null;
 
   const copyLink = async () => {
     if (!selectedImage) return;
@@ -242,9 +287,31 @@ export default function Gallery({ characterId, onUseForAnimation, onEdit }: Prop
       : 'aspect-[16/9]';
 
   if (loading) return <div className="py-8 text-sm text-gray-500">Galéria betöltése...</div>;
-  if (!images.length) return <div className="py-8 text-sm text-gray-500">Még nincs generált kép.</div>;
+  if (!galleryItems.length) return <div className="py-8 text-sm text-gray-500">Még nincs generált kép vagy videó.</div>;
 
-  const renderInfoRows = (img: ImageInfo) => [
+  const renderInfoRows = (item: GalleryItem) => {
+    if (item.kind === 'video') {
+      return [
+        ['Típus', 'Videó'],
+        ['Dátum', new Date(item.data.created).toLocaleString('hu-HU')],
+        ['Fájl', item.data.filename],
+        ['Hossz', item.data.durationSeconds ? `${item.data.durationSeconds} mp` : 'Nincs adat'],
+        ['Állapot', item.data.status],
+      ];
+    }
+
+    const img = item.data;
+    return [
+      ['Dátum', new Date(img.created).toLocaleString('hu-HU')],
+      ['Fájl', img.filename],
+      ['Stílus', img.meta?.style || 'Nincs adat'],
+      ['Kamera', img.meta?.camera || 'Nincs adat'],
+      ['Képarány', formatAspectRatio(img.meta?.aspectRatio)],
+      ['Variáns', formatVariant(img.meta?.variant)],
+      ['Kreditköltség', typeof img.meta?.creditCost === 'number' ? String(img.meta.creditCost) : 'Nincs adat'],
+      ['Karakterek', img.meta?.characterIds?.length ? img.meta.characterIds.join(', ') : 'Nincs adat'],
+    ];
+  };
     ['Dátum', new Date(img.created).toLocaleString('hu-HU')],
     ['Fájl', img.filename],
     ['Stílus', img.meta?.style || 'Nincs adat'],
