@@ -308,15 +308,7 @@ export default function Gallery({ characterId, onUseForAnimation, onEdit }: Prop
       ['Karakterek', img.meta?.characterIds?.length ? img.meta.characterIds.join(', ') : 'Nincs adat'],
     ];
   };
-    ['Dátum', new Date(img.created).toLocaleString('hu-HU')],
-    ['Fájl', img.filename],
-    ['Stílus', img.meta?.style || 'Nincs adat'],
-    ['Kamera', img.meta?.camera || 'Nincs adat'],
-    ['Képarány', formatAspectRatio(img.meta?.aspectRatio)],
-    ['Variáns', formatVariant(img.meta?.variant)],
-    ['Kreditköltség', typeof img.meta?.creditCost === 'number' ? String(img.meta.creditCost) : 'Nincs adat'],
-    ['Karakterek', img.meta?.characterIds?.length ? img.meta.characterIds.join(', ') : 'Nincs adat'],
-  ];
+  
 
   return (
     <>
@@ -410,29 +402,37 @@ export default function Gallery({ characterId, onUseForAnimation, onEdit }: Prop
         </div>
       </div>
 
-      {selectedImage && modal === 'info' && (
+      {selectedItem && modal === 'info' && (
         <div
           className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
           onClick={closeAll}
           role="dialog"
           aria-modal="true"
-          aria-label="Kép adatai"
+          aria-label="Média adatai"
         >
           <div className="max-h-[88vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-gray-800 bg-zinc-950 p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
             <div className="mb-5 flex items-center justify-between gap-4">
               <div>
-                <div className="text-[10px] uppercase tracking-[0.25em] text-gray-600">GENERÁLT KÉP</div>
-                <h3 className="mt-1 text-lg font-bold text-white">Kép adatai</h3>
+                <div className="text-[10px] uppercase tracking-[0.25em] text-gray-600">GALÉRIA</div>
+                <h3 className="mt-1 text-lg font-bold text-white">{selectedItem.kind === 'video' ? 'Videó adatai' : 'Kép adatai'}</h3>
               </div>
               <button type="button" onClick={closeAll} className="rounded-lg border border-gray-700 p-2 text-gray-400 transition hover:border-gray-500 hover:text-white" aria-label="Bezárás">
                 <Icon name="close" />
               </button>
             </div>
 
+            <div className="mb-5 overflow-hidden rounded-xl border border-gray-800 bg-black">
+              {selectedItem.kind === 'video' ? (
+                <video src={selectedItem.data.url} poster={selectedItem.data.sourceImageUrl} controls playsInline preload="metadata" className="max-h-[55vh] w-full bg-black" />
+              ) : (
+                <img src={selectedItem.data.url} alt={selectedItem.data.filename} className="mx-auto max-h-[55vh] w-full object-contain" />
+              )}
+            </div>
+
             <div className="overflow-hidden rounded-xl border border-gray-800">
               <table className="w-full border-collapse text-sm">
                 <tbody>
-                  {renderInfoRows(selectedImage).map(([label, value]) => (
+                  {renderInfoRows(selectedItem).map(([label, value]) => (
                     <tr key={label} className="border-b border-gray-800 last:border-b-0">
                       <th className="w-40 bg-zinc-900/70 px-4 py-3 text-left font-medium text-gray-500">{label}</th>
                       <td className="px-4 py-3 text-gray-200 break-words">{value}</td>
@@ -442,11 +442,20 @@ export default function Gallery({ characterId, onUseForAnimation, onEdit }: Prop
               </table>
             </div>
 
-            {selectedImage.meta?.prompt && (
+            {selectedItem.kind === 'image' && selectedImage.meta?.prompt && (
               <div className="mt-4">
                 <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Prompt</div>
                 <div className="max-h-56 overflow-y-auto rounded-xl border border-gray-800 bg-black/40 p-4 text-xs leading-5 text-gray-400 whitespace-pre-wrap">
                   {selectedImage.meta.prompt}
+                </div>
+              </div>
+            )}
+
+            {selectedItem.kind === 'video' && selectedVideo.prompt && (
+              <div className="mt-4">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Mozgás prompt</div>
+                <div className="max-h-56 overflow-y-auto rounded-xl border border-gray-800 bg-black/40 p-4 text-xs leading-5 text-gray-400 whitespace-pre-wrap">
+                  {selectedVideo.prompt}
                 </div>
               </div>
             )}
@@ -508,69 +517,47 @@ export default function Gallery({ characterId, onUseForAnimation, onEdit }: Prop
         </div>
       )}
 
-      {selectedImage && modal === null && (
+      {selectedItem && modal === null && (
         <div
           className="fixed inset-0 z-[60] bg-black/95 p-3 sm:p-5"
           onClick={() => setSelectedIndex(null)}
           role="dialog"
           aria-modal="true"
-          aria-label="Kép nagy méretű előnézete"
+          aria-label={selectedItem.kind === 'video' ? 'Videó előnézete' : 'Kép előnézete'}
         >
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              openShare(selectedIndex);
-            }}
-            className="fixed right-4 top-4 z-[62] inline-flex min-h-11 items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-black shadow-2xl transition hover:bg-gray-200 sm:right-6 sm:top-6"
-          >
-            <Icon name="share" />
-            Megosztás
-          </button>
+          {selectedImage && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                openShare(selectedIndex);
+              }}
+              className="fixed right-4 top-4 z-[62] inline-flex min-h-11 items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-black shadow-2xl transition hover:bg-gray-200 sm:right-6 sm:top-6"
+            >
+              <Icon name="share" />
+              Megosztás
+            </button>
+          )}
 
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              setSelectedIndex(null);
-            }}
-            className="fixed left-4 top-4 z-[62] rounded-xl border border-gray-700 bg-black/80 p-2.5 text-gray-300 transition hover:border-gray-500 hover:text-white sm:left-6 sm:top-6"
-            aria-label="Bezárás"
-          >
+          <button type="button" onClick={(event) => { event.stopPropagation(); setSelectedIndex(null); }} className="fixed left-4 top-4 z-[62] rounded-xl border border-gray-700 bg-black/80 p-2.5 text-gray-300 transition hover:border-gray-500 hover:text-white sm:left-6 sm:top-6" aria-label="Bezárás">
             <Icon name="close" />
           </button>
 
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              setSelectedIndex((prev) => (prev === null ? 0 : (prev - 1 + images.length) % images.length));
-            }}
-            className="fixed left-3 top-1/2 z-[62] hidden -translate-y-1/2 rounded-full border border-gray-700 bg-black/70 p-3 text-white transition hover:border-gray-500 md:block"
-            aria-label="Előző kép"
-          >
+          <button type="button" onClick={(event) => { event.stopPropagation(); setSelectedIndex((prev) => (prev === null ? 0 : (prev - 1 + galleryItems.length) % galleryItems.length)); }} className="fixed left-3 top-1/2 z-[62] hidden -translate-y-1/2 rounded-full border border-gray-700 bg-black/70 p-3 text-white transition hover:border-gray-500 md:block" aria-label="Előző média">
             ‹
           </button>
 
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              setSelectedIndex((prev) => (prev === null ? 0 : (prev + 1) % images.length));
-            }}
-            className="fixed right-3 top-1/2 z-[62] hidden -translate-y-1/2 rounded-full border border-gray-700 bg-black/70 p-3 text-white transition hover:border-gray-500 md:block"
-            aria-label="Következő kép"
-          >
+          <button type="button" onClick={(event) => { event.stopPropagation(); setSelectedIndex((prev) => (prev === null ? 0 : (prev + 1) % galleryItems.length)); }} className="fixed right-3 top-1/2 z-[62] hidden -translate-y-1/2 rounded-full border border-gray-700 bg-black/70 p-3 text-white transition hover:border-gray-500 md:block" aria-label="Következő média">
             ›
           </button>
 
           <div className="flex h-full w-full items-center justify-center" onClick={(event) => event.stopPropagation()}>
             <div className="flex max-h-full max-w-[92vw] items-center justify-center">
-              <img
-                src={selectedImage.url}
-                alt={selectedImage.filename}
-                className="max-h-[calc(100vh-2rem)] max-w-[92vw] rounded-xl object-contain shadow-2xl sm:max-h-[calc(100vh-2.5rem)]"
-              />
+              {selectedItem.kind === 'video' ? (
+                <video src={selectedItem.data.url} poster={selectedItem.data.sourceImageUrl} controls autoPlay playsInline preload="metadata" className="max-h-[calc(100vh-2rem)] max-w-[92vw] rounded-xl bg-black object-contain shadow-2xl sm:max-h-[calc(100vh-2.5rem)]" />
+              ) : (
+                <img src={selectedItem.data.url} alt={selectedItem.data.filename} className="max-h-[calc(100vh-2rem)] max-w-[92vw] rounded-xl object-contain shadow-2xl sm:max-h-[calc(100vh-2.5rem)]" />
+              )}
             </div>
           </div>
         </div>
