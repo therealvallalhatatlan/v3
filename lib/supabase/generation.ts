@@ -4,6 +4,10 @@ import { MEDIA_BUCKET } from './media';
 
 const DEFAULT_WATERMARK_LOGO_URL = 'https://www.vallalhatatlan.online/img/logo.png';
 
+export function shouldAddWatermark(plan: unknown): boolean {
+  return String(plan || '').trim().toLowerCase() === 'free';
+}
+
 async function createWatermarkedImage(normalized: Buffer, target: { width: number; height: number }): Promise<Buffer> {
   const logoUrl = process.env.WATERMARK_LOGO_URL || DEFAULT_WATERMARK_LOGO_URL;
 
