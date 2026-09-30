@@ -148,9 +148,22 @@ export default function AnimationPanel({
               { cache: 'no-store' },
             );
             const data = await response.json();
+
+            if (!response.ok) {
+              return {
+                ...job,
+                status: 'failed' as const,
+                error: data?.error || `Státuszlekérdezési hiba (${response.status})`,
+              };
+            }
+
             return data.job || job;
-          } catch {
-            return job;
+          } catch (pollError: any) {
+            return {
+              ...job,
+              status: 'failed' as const,
+              error: pollError?.message || 'A videó állapotának lekérdezése sikertelen.',
+            };
           }
         }),
       );
