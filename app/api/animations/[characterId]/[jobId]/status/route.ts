@@ -100,13 +100,24 @@ export async function GET(
         }
       }
 
-      const done = await updateVideoJob(user.id, characterId, jobId, {
+      const doneUpdates: Parameters<typeof updateVideoJob>[3] = {
         status: 'done',
-        video_storage_path: videoStoragePath ?? null,
         provider_video_url: providerVideoUrl,
         error: null,
         completed_at: new Date().toISOString(),
-      });
+      };
+
+      // Do not clear a path another concurrent poll may already have stored.
+      if (videoStoragePath) {
+        doneUpdates.video_storage_path = videoStoragePath;
+      }
+
+      const done = await updateVideoJob(
+        user.id,
+        characterId,
+        jobId,
+        doneUpdates,
+      );
 
       if (!done) {
         return NextResponse.json(
