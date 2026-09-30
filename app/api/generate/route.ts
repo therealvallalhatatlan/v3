@@ -7,7 +7,7 @@ import { normalizeToPromptEnglish } from '../../../lib/sceneMapper';
 import { getPreset } from '../../../lib/presetStore';
 import { createSupabaseServerClient, getCurrentUser } from '../../../lib/supabase/server';
 import { getAppCharacterById } from '../../../lib/supabase/characters';
-import { saveGeneratedImageToSupabase } from '../../../lib/supabase/generation';
+import { saveGeneratedImageToSupabase, shouldAddWatermark } from '../../../lib/supabase/generation';
 import { createSignedMediaUrl } from '../../../lib/supabase/media';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -226,7 +226,7 @@ export async function POST(req: NextRequest) {
       recordPrompt: string,
       interactionId?: string,
     ) => {
-      const storagePath = await saveGeneratedImageToSupabase(imageBase64, currentUserId, generationId, aspectRatioKey, profile.plan === 'free');
+      const storagePath = await saveGeneratedImageToSupabase(imageBase64, currentUserId, generationId, aspectRatioKey, shouldAddWatermark(profile.plan));
       const { error: insertError } = await supabase.from('generated_images').insert({
         id: generationId,
         owner_id: currentUserId,
