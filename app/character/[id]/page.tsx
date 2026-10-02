@@ -10,6 +10,7 @@ import type { ImageInfo } from './AnimationPanel';
 import type { Character } from '../../../types';
 import type { AspectRatio16x9, LocationPreset } from '../../../types/prompt';
 import { LIGHTING_PRESETS } from '../../../lib/lighting';
+import { createSupabaseBrowserClient } from '../../../lib/supabase/client';
 
 type PresetOption = { value: string; label: string };
 
@@ -134,42 +135,41 @@ type PresetCatalogResponse = {
   };
 };
 
-function compressBackgroundReference(file: File): Promise<string> {
+function compressBackgroundReference(file: File): Promise<Blob> {
   return new Promise((resolve, reject) => {
     if (!file.type.startsWith('image/')) {
       reject(new Error('Csak képfájlt válassz.'));
       return;
     }
 
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('A kép beolvasása sikertelen.'));
-    reader.onload = () => {
-      const image = new Image();
-      image.onerror = () => reject(new Error('A kép nem olvasható.'));
-      image.onload = () => {
-        const maxDimension = 2048;
-        const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
-        const width = Math.max(1, Math.round(image.naturalWidth * scale));
-        const height = Math.max(1, Math.round(image.naturalHeight * scale));
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const context = canvas.getContext('2d');
-        if (!context) {
-          reject(new Error('A kép feldolgozása sikertelen.'));
-          return;
-        }
-        context.drawImage(image, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
-        if (!dataUrl || dataUrl === 'data:,') {
-          reject(new Error('A kép tömörítése sikertelen.'));
-          return;
-        }
-        resolve(dataUrl);
-      };
-      image.src = String(reader.result || '');
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('A kép nem olvasható.'));
     };
-    reader.readAsDataURL(file);
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const maxDimension = 2048;
+      const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+      const width = Math.max(1, Math.round(image.naturalWidth * scale));
+      const height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d');
+      if (!context) {
+        reject(new Error('A kép feldolgozása sikertelen.'));
+        return;
+      }
+      context.drawImage(image, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => blob ? resolve(blob) : reject(new Error('A kép tömörítése sikertelen.')),
+        'image/jpeg',
+        0.82,
+      );
+    };
+    image.src = objectUrl;
   });
 }
 
@@ -530,16 +530,51 @@ export default function CharacterDetailPage() {
     setBackgroundReferenceUploading(true);
     setBackgroundReferenceError('');
     try {
-      const imageDataUrl = await compressBackgroundReference(file);
-      const response = await fetch('/api/generate/background-reference', {
+      const compressed = await compressBackgroundReference(file);
+      const uploadUrlResponse = await fetch('/api/generate/background-reference', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageDataUrl }),
+        body: JSON.stringify({ contentType: 'image/jpeg', size: compressed.size }),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data?.error || 'A referencia-kép feltöltése sikertelen.');
-      setBackgroundReferencePath(String(data.path || ''));
-      setBackgroundReferenceUrl(String(data.url || ''));
+      const uploadUrlData = await uploadUrlResponse.json();
+      if (!uploadUrlResponse.ok) {
+        throw new Error(uploadUrlData?.error || 'A referencia-kép feltöltési jogosultságának létrehozása sikertelen.');
+      }
+
+      const path = String(uploadUrlData.path || '');
+      const token = String(uploadUrlData.token || '');
+      if (!path || !token) throw new Error('Hiányzó feltöltési token.');
+
+      const supabase = createSupabaseBrowserClient();
+      const { error: uploadError } = await supabase.storage
+        .from('v3-media')
+        .uploadToSignedUrl(path, token, compressed, {
+          contentType: 'image/jpeg',
+          cacheControl: '3600',
+        });
+      if (uploadError) throw new Error(uploadError.message);
+
+      const previewResponse = await fetch(
+        '/api/generate/background-reference?path=' + encodeURIComponent(path),
+        { cache: 'no-store' },
+      );
+      const previewData = await previewResponse.json();
+      if (!previewResponse.ok) {
+        throw new Error(previewData?.error || 'A referencia-kép előnézete nem tölthető be.');
+      }
+
+      if (backgroundReferencePath) {
+        try {
+          await fetch('/api/generate/background-reference', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: backgroundReferencePath }),
+          });
+        } catch {}
+      }
+
+      setBackgroundReferencePath(path);
+      setBackgroundReferenceUrl(String(previewData.url || ''));
     } catch (error: any) {
       setBackgroundReferencePath('');
       setBackgroundReferenceUrl('');
@@ -730,7 +765,7 @@ export default function CharacterDetailPage() {
                       disabled={backgroundReferenceUploading || loading}
                       className="flex min-h-24 w-full items-center justify-center rounded-lg border border-dashed border-gray-800 bg-black/20 text-xs text-gray-600 transition hover:border-gray-600 hover:text-gray-400 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      Húzd rá a képet… vagy válaszd ki a gépedről
+                      Kattints és válassz képet a gépedről
                     </button>
                   )}
 
