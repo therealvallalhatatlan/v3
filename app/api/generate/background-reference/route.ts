@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     if (imageDataUrl.length > MAX_DATA_URL_LENGTH) {
       return NextResponse.json({ error: 'A referencia-kép túl nagy.' }, { status: 413 });
     }
-    if (!/^data:image\\/(png|jpe?g|webp);base64,/i.test(imageDataUrl)) {
+    if (!/^data:image\/(png|jpe?g|webp);base64,/i.test(imageDataUrl)) {
       return NextResponse.json({ error: 'Csak PNG, JPG vagy WebP kép tölthető fel.' }, { status: 400 });
     }
 
