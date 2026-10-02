@@ -113,12 +113,27 @@ function buildFramingBlock(scene: SceneInput): string {
   return `\n[FRAMING]\nOrientation: landscape (horizontal), cinematic widescreen 16:9\nRule: fill the entire frame horizontally, no portrait composition, no black bars, no letterboxing, no centered vertical subject\nComposition: characters and action must span the width of the frame\n`;
 }
 
+function buildBackgroundReferenceBlock(scene: SceneInput): string {
+  if (!scene.backgroundReference) return '';
+  return `
+[BACKGROUND REFERENCE]
+- Treat the supplied background reference image as an environmental and compositional guide, never as a literal background plate.
+- Preserve the reference environment's major recognizable properties when compatible: overall spatial organization, architecture or furniture, depth layers, dominant materials, important environmental landmarks, lighting logic, and broad palette relationships.
+- Reconstruct and reinterpret the environment around the current character(s), action, camera, aspect ratio, and visual style.
+- Adapt perspective, crop, scale, depth of field, shadows, reflections, and object placement to make the scene physically coherent.
+- Do not paste, clone, trace, or reproduce the reference image pixel-for-pixel.
+- Do not force the original framing or perspective when it conflicts with the selected camera or character composition.
+- If people or characters appear in the reference, ignore their identity and use them only as incidental environmental context unless the explicit scene request says otherwise.
+- The current character identity, explicit scene instructions, and selected camera remain the primary source of truth.
+`;
+}
+
 export function buildSceneBlock(scene: SceneInput): string {
   const cast = scene.castAliases && scene.castAliases.length > 1 ? scene.castAliases.join(', ') : null;
   const actionLine = scene.actionPrompt ? `Action prompt: ${scene.actionPrompt}` : 'Action prompt: not provided';
   const lightingText = scene.lighting || scene.scenePackage?.locationProfile?.lightingAndTime || '';
   const lightingLine = lightingText ? `Lighting: ${normalizeToPromptEnglish(lightingText)}` : 'Lighting: not provided';
-  return `\n[SCENE]\nLocation:\n${buildLocationProfileSummary(scene)}\n${lightingLine}\n${actionLine}\n\n${buildFramingBlock(scene)}\n\n${buildShotTemplateBlock(scene)}\n\n${buildContinuityBlock(scene)}\n\n[INTERACTION]\n${cast ? `Characters ${cast} are naturally integrated into the scene, with believable spacing and body language` : 'Character is naturally integrated into the scene, not posing artificially'}\n`;
+  return `\n[SCENE]\nLocation:\n${buildLocationProfileSummary(scene)}\n${lightingLine}\n${actionLine}\n${buildBackgroundReferenceBlock(scene)}\n\n${buildFramingBlock(scene)}\n\n${buildShotTemplateBlock(scene)}\n\n${buildContinuityBlock(scene)}\n\n[INTERACTION]\n${cast ? `Characters ${cast} are naturally integrated into the scene, with believable spacing and body language` : 'Character is naturally integrated into the scene, not posing artificially'}\n`;
 }
 
 export { MOOD_MAP };
