@@ -85,6 +85,8 @@ export async function generateImageInteraction(options: {
   prompt: string;
   sourceImage?: GeminiImageInput;
   additionalImages?: GeminiImageInput[];
+  /** Optional environment reference. This image is explicitly labeled as a compositional/background reference. */
+  backgroundReferenceImage?: GeminiImageInput;
   previousInteractionId?: string | null;
   aspectRatio?: '16:9' | '9:16';
   imageSize?: '0.5K' | '1K' | '2K' | '4K';
@@ -97,6 +99,13 @@ export async function generateImageInteraction(options: {
   if (options.sourceImage) inputParts.push(inputToPart(options.sourceImage));
   for (const image of options.additionalImages || []) {
     inputParts.push(inputToPart(image));
+  }
+  if (options.backgroundReferenceImage) {
+    inputParts.push({
+      type: 'text',
+      text: '[BACKGROUND REFERENCE IMAGE]\nUse the following image only as an environmental and compositional reference. Do not paste it as the literal background.',
+    });
+    inputParts.push(inputToPart(options.backgroundReferenceImage));
   }
   inputParts.push({ type: 'text', text: options.prompt });
 
