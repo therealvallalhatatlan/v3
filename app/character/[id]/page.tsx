@@ -134,6 +134,45 @@ type PresetCatalogResponse = {
   };
 };
 
+function compressBackgroundReference(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) {
+      reject(new Error('Csak képfájlt válassz.'));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('A kép beolvasása sikertelen.'));
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => reject(new Error('A kép nem olvasható.'));
+      image.onload = () => {
+        const maxDimension = 2048;
+        const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+        const width = Math.max(1, Math.round(image.naturalWidth * scale));
+        const height = Math.max(1, Math.round(image.naturalHeight * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext('2d');
+        if (!context) {
+          reject(new Error('A kép feldolgozása sikertelen.'));
+          return;
+        }
+        context.drawImage(image, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+        if (!dataUrl || dataUrl === 'data:,') {
+          reject(new Error('A kép tömörítése sikertelen.'));
+          return;
+        }
+        resolve(dataUrl);
+      };
+      image.src = String(reader.result || '');
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 const Gallery = dynamic(() => import('./Gallery'), { ssr: false });
 const ImageEditChat = dynamic(() => import('./ImageEditChat'), { ssr: false });
 const AnimationPanel = dynamic(() => import('./AnimationPanel'), { ssr: false });
@@ -203,9 +242,14 @@ export default function CharacterDetailPage() {
   const [referenceUploading, setReferenceUploading] = useState(false);
   const [referenceError, setReferenceError] = useState('');
   const [referenceLayerOpen, setReferenceLayerOpen] = useState(false);
+  const [backgroundReferencePath, setBackgroundReferencePath] = useState('');
+  const [backgroundReferenceUrl, setBackgroundReferenceUrl] = useState('');
+  const [backgroundReferenceUploading, setBackgroundReferenceUploading] = useState(false);
+  const [backgroundReferenceError, setBackgroundReferenceError] = useState('');
 
   const hydratedRef = useRef(false);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const backgroundReferenceInputRef = useRef<HTMLInputElement | null>(null);
 
   const getCharacterFormKey = (id: string) => `${CHAR_FORM_KEY_PREFIX}.${id}`;
   const getCharacterPresetsKey = (id: string) => `${CHAR_PRESETS_KEY_PREFIX}.${id}`;
@@ -473,6 +517,54 @@ export default function CharacterDetailPage() {
     persistHistoryValue(LIGHTING_HISTORY_KEY, preset.prompt, lightingHistory, setLightingHistory);
   };
 
+  const handleBackgroundReferenceUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setBackgroundReferenceError('Csak képfájlt válassz.');
+      return;
+    }
+
+    setBackgroundReferenceUploading(true);
+    setBackgroundReferenceError('');
+    try {
+      const imageDataUrl = await compressBackgroundReference(file);
+      const response = await fetch('/api/generate/background-reference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageDataUrl }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || 'A referencia-kép feltöltése sikertelen.');
+      setBackgroundReferencePath(String(data.path || ''));
+      setBackgroundReferenceUrl(String(data.url || ''));
+    } catch (error: any) {
+      setBackgroundReferencePath('');
+      setBackgroundReferenceUrl('');
+      setBackgroundReferenceError(error?.message || 'A referencia-kép feltöltése sikertelen.');
+    } finally {
+      setBackgroundReferenceUploading(false);
+    }
+  };
+
+  const clearBackgroundReference = async () => {
+    const path = backgroundReferencePath;
+    setBackgroundReferencePath('');
+    setBackgroundReferenceUrl('');
+    setBackgroundReferenceError('');
+    if (!path) return;
+
+    try {
+      await fetch('/api/generate/background-reference', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path }),
+      });
+    } catch {}
+  };
+
   const handleGenerate = async (event: React.FormEvent) => {
     event.preventDefault();
     persistHistoryValue(LOCATION_HISTORY_KEY, location, locationHistory, setLocationHistory);
@@ -487,6 +579,7 @@ export default function CharacterDetailPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           characterId: primaryCharacterId, characterIds, aliasMap: selectedAliasMap, location, lighting, actionPrompt,
+          backgroundReferencePath: backgroundReferencePath || undefined,
           scenePackage: { locationProfile: { preset: locationPreset, detail: location, geometry: locationGeometry, lightingAndTime: lighting, paletteAndTexture: locationPalette, fixedProps: locationProps, cameraContinuity: locationCameraContinuity }, continuity: { lockGeometry, lockLighting, lockPalette, lockProps, lockCameraRules, notes: continuityNotes.trim() || undefined }, bilingualInput: { sourceLanguage: 'mixed' } },
           camera, aspectRatio, style, styleIntensity, compareStyle: compareStylePayload,
         }),
@@ -584,6 +677,68 @@ export default function CharacterDetailPage() {
                     rows={3}
                     placeholder="Hol történjen a jelenet? A preset az alap környezetet adja, ezt itt pontosíthatod."
                   />
+                </div>
+
+                <div className="space-y-3 rounded-lg border border-gray-800 bg-zinc-950 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <label className="text-sm font-semibold text-gray-300">Háttér-referencia <span className="font-normal text-gray-600">opcionális</span></label>
+                      <div className="mt-1 text-[11px] leading-5 text-gray-600">
+                        Az AI a kép környezetét és kompozícióját veszi alapul, majd újraépíti a jelenetet a figurádhoz igazítva.
+                      </div>
+                    </div>
+                    <input
+                      ref={backgroundReferenceInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={handleBackgroundReferenceUpload}
+                      disabled={backgroundReferenceUploading || loading}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => backgroundReferenceInputRef.current?.click()}
+                      disabled={backgroundReferenceUploading || loading}
+                      className="shrink-0 rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-xs font-semibold text-gray-200 hover:border-gray-500 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {backgroundReferenceUploading ? 'Feldolgozás…' : backgroundReferencePath ? 'Kép cseréje' : 'Kép kiválasztása'}
+                    </button>
+                  </div>
+
+                  {backgroundReferenceUrl && (
+                    <div className="relative overflow-hidden rounded-lg border border-gray-800 bg-black">
+                      <img
+                        src={backgroundReferenceUrl}
+                        alt="Háttér-referencia előnézete"
+                        className="max-h-72 w-full object-contain"
+                      />
+                      <button
+                        type="button"
+                        onClick={clearBackgroundReference}
+                        disabled={loading}
+                        className="absolute right-2 top-2 rounded-md bg-black/80 px-2 py-1 text-[11px] text-gray-300 hover:bg-black hover:text-white disabled:opacity-50"
+                      >
+                        Eltávolítás
+                      </button>
+                    </div>
+                  )}
+
+                  {!backgroundReferenceUrl && (
+                    <button
+                      type="button"
+                      onClick={() => backgroundReferenceInputRef.current?.click()}
+                      disabled={backgroundReferenceUploading || loading}
+                      className="flex min-h-24 w-full items-center justify-center rounded-lg border border-dashed border-gray-800 bg-black/20 text-xs text-gray-600 transition hover:border-gray-600 hover:text-gray-400 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Húzd rá a képet… vagy válaszd ki a gépedről
+                    </button>
+                  )}
+
+                  {backgroundReferenceError && (
+                    <div className="rounded-lg border border-red-900 bg-red-950/30 px-3 py-2 text-xs text-red-300">
+                      {backgroundReferenceError}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -819,7 +974,7 @@ export default function CharacterDetailPage() {
 
                 {error && <div className="text-red-400 text-sm bg-red-950/50 border border-red-900 rounded px-3 py-2">{error}</div>}
 
-                <button type="submit" disabled={loading} className="w-full bg-white hover:bg-gray-200 text-black disabled:opacity-50 py-3 rounded-lg font-semibold text-sm flex items-center justify-center gap-2">
+                <button type="submit" disabled={loading || backgroundReferenceUploading} className="w-full bg-white hover:bg-gray-200 text-black disabled:opacity-50 py-3 rounded-lg font-semibold text-sm flex items-center justify-center gap-2">
                   {loading ? 'Generálás…' : '✨ Kép generálása'}
                 </button>
               </form>
