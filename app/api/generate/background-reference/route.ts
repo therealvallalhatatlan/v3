@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import { createSupabaseServerClient, getCurrentUser } from '../../../../lib/supabase/server';
-import {
-  createSignedMediaUrl,
-  dataUrlToBuffer,
-  deleteMedia,
-  uploadMedia,
-} from '../../../../lib/supabase/media';
+import { createSignedMediaUrl, deleteMedia } from '../../../../lib/supabase/media';
 
-const MAX_DATA_URL_LENGTH = 8_000_000;
-const MAX_DIMENSION = 2048;
+const MAX_FILE_BYTES = 8 * 1024 * 1024;
+const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 function ownBackgroundPath(userId: string, value: unknown): string {
   const path = String(value || '').trim();
@@ -29,33 +23,54 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const imageDataUrl = String(body?.imageDataUrl || '').trim();
-    if (!imageDataUrl) {
-      return NextResponse.json({ error: 'Missing imageDataUrl' }, { status: 400 });
-    }
-    if (imageDataUrl.length > MAX_DATA_URL_LENGTH) {
-      return NextResponse.json({ error: 'A referencia-kép túl nagy.' }, { status: 413 });
-    }
-    if (!/^data:image\/(png|jpe?g|webp);base64,/i.test(imageDataUrl)) {
-      return NextResponse.json({ error: 'Csak PNG, JPG vagy WebP kép tölthető fel.' }, { status: 400 });
-    }
+    const contentType = String(body?.contentType || 'image/jpeg').toLowerCase();
+    const size = Number(body?.size || 0);
 
-    const { buffer } = dataUrlToBuffer(imageDataUrl);
-    const processed = await sharp(buffer, { failOn: 'none' })
-      .rotate()
-      .resize(MAX_DIMENSION, MAX_DIMENSION, { fit: 'inside', withoutEnlargement: true })
-      .jpeg({ quality: 88, mozjpeg: true })
-      .toBuffer();
+    if (!ALLOWED_TYPES.has(contentType)) {
+      return NextResponse.json({ error: 'Csak JPG, PNG vagy WebP kép tölthető fel.' }, { status: 400 });
+    }
+    if (!Number.isFinite(size) || size <= 0 || size > MAX_FILE_BYTES) {
+      return NextResponse.json({ error: 'A referencia-kép legfeljebb 8 MB lehet.' }, { status: 413 });
+    }
 
     const path = user.id + '/background-references/' + uuidv4() + '.jpg';
-    await uploadMedia(path, processed, 'image/jpeg');
-    const url = await createSignedMediaUrl(path, 3600);
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.storage
+      .from('v3-media')
+      .createSignedUploadUrl(path);
 
+    if (error || !data?.token) {
+      throw new Error(error?.message || 'Nem sikerült feltöltési jogosultságot létrehozni.');
+    }
+
+    return NextResponse.json({
+      ok: true,
+      path,
+      token: data.token,
+    });
+  } catch (error: any) {
+    console.error('Background reference upload-url error:', error);
+    return NextResponse.json(
+      { error: error?.message || 'A referencia-kép feltöltési jogosultságának létrehozása sikertelen.' },
+      { status: 500 },
+    );
+  }
+}
+
+export async function GET(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+  }
+
+  try {
+    const path = ownBackgroundPath(user.id, new URL(req.url).searchParams.get('path'));
+    const url = await createSignedMediaUrl(path, 3600);
     return NextResponse.json({ ok: true, path, url });
   } catch (error: any) {
-    console.error('Background reference upload error:', error);
+    console.error('Background reference signing error:', error);
     return NextResponse.json(
-      { error: error?.message || 'A referencia-kép feltöltése sikertelen.' },
+      { error: error?.message || 'A referencia-kép előnézetének létrehozása sikertelen.' },
       { status: 500 },
     );
   }
