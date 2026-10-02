@@ -269,7 +269,7 @@ export async function POST(req: NextRequest) {
       imageSize: '1K',
       backgroundReferenceImage: backgroundReferenceDataUrl
         ? (() => {
-            const match = String(backgroundReferenceDataUrl).match(/^data:(image\\/[^;]+);base64,(.+)$/);
+            const match = String(backgroundReferenceDataUrl).match(/^data:(image\/[^;]+);base64,(.+)$/);
             return {
               mimeType: match?.[1] || 'image/jpeg',
               data: match?.[2] || '',
@@ -302,7 +302,7 @@ export async function POST(req: NextRequest) {
         imageSize: '1K',
         backgroundReferenceImage: backgroundReferenceDataUrl
           ? (() => {
-              const match = String(backgroundReferenceDataUrl).match(/^data:(image\\/[^;]+);base64,(.+)$/);
+              const match = String(backgroundReferenceDataUrl).match(/^data:(image\/[^;]+);base64,(.+)$/);
               return {
                 mimeType: match?.[1] || 'image/jpeg',
                 data: match?.[2] || '',
