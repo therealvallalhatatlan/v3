@@ -29,6 +29,8 @@ export type SceneInput = {
   style: StylePreset;
   styleIntensity: number;
   camera: string;
+  /** True when a separate environment/background reference image is supplied. */
+  backgroundReference?: boolean;
 };
 
 export type LocationProfile = {
