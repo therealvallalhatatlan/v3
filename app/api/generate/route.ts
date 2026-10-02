@@ -8,7 +8,7 @@ import { getPreset } from '../../../lib/presetStore';
 import { createSupabaseServerClient, getCurrentUser } from '../../../lib/supabase/server';
 import { getAppCharacterById } from '../../../lib/supabase/characters';
 import { saveGeneratedImageToSupabase, shouldAddWatermark } from '../../../lib/supabase/generation';
-import { createSignedMediaUrl } from '../../../lib/supabase/media';
+import { createSignedMediaUrl, deleteMedia, downloadAsDataUrl } from '../../../lib/supabase/media';
 import { v4 as uuidv4 } from 'uuid';
 
 function clampIntensity(value: unknown): number {
@@ -95,14 +95,25 @@ export async function POST(req: NextRequest) {
   let reservedCredits = 0;
   let consumedCredits = 0;
   let currentUserId = '';
+  let backgroundReferencePathForCleanup = '';
   try {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     currentUserId = user.id;
 
     const data = await req.json();
-    const { characterId, characterIds, aliasMap, location, lighting, mood, actionPrompt, camera, aspectRatio, style, styleIntensity, compareStyle, textOnly, scenePackage } = data;
+    const { characterId, characterIds, aliasMap, location, lighting, mood, actionPrompt, camera, aspectRatio, style, styleIntensity, compareStyle, textOnly, scenePackage, backgroundReferencePath } = data;
     const lightingText = normalizeText(typeof lighting === 'string' ? lighting : mood, 500);
+    const requestedBackgroundReferencePath = String(backgroundReferencePath || '').trim();
+    let backgroundReferenceDataUrl = '';
+    if (requestedBackgroundReferencePath) {
+      const expectedPrefix = currentUserId + '/background-references/';
+      if (!requestedBackgroundReferencePath.startsWith(expectedPrefix)) {
+        return NextResponse.json({ error: 'Invalid background reference path' }, { status: 403 });
+      }
+      backgroundReferencePathForCleanup = requestedBackgroundReferencePath;
+      backgroundReferenceDataUrl = await downloadAsDataUrl(requestedBackgroundReferencePath);
+    }
     const normalizedCharacterIds = Array.from(new Set([...(Array.isArray(characterIds) ? characterIds : []), characterId].map((id) => String(id || '').trim()).filter(Boolean)));
     if (normalizedCharacterIds.length === 0) return NextResponse.json({ error: 'characterId or characterIds is required' }, { status: 400 });
     const loadedCharacters = await Promise.all(normalizedCharacterIds.map((id) => getAppCharacterById(id, true)));
@@ -178,6 +189,7 @@ export async function POST(req: NextRequest) {
       style: styleKey,
       styleIntensity: intensity,
       camera: cameraKeyForUser,
+      backgroundReference: Boolean(backgroundReferenceDataUrl),
     };
 
     const locationFingerprintSource = normalizedScenePackage
@@ -255,6 +267,15 @@ export async function POST(req: NextRequest) {
       }),
       aspectRatio: geminiAspectRatio,
       imageSize: '1K',
+      backgroundReferenceImage: backgroundReferenceDataUrl
+        ? (() => {
+            const match = String(backgroundReferenceDataUrl).match(/^data:(image\\/[^;]+);base64,(.+)$/);
+            return {
+              mimeType: match?.[1] || 'image/jpeg',
+              data: match?.[2] || '',
+            };
+          })()
+        : undefined,
     });
     if (!generatedA.imageBase64) throw new Error('Gemini returned no image data');
     const savedA = await saveGeneratedRecord(
@@ -279,6 +300,15 @@ export async function POST(req: NextRequest) {
         }),
         aspectRatio: geminiAspectRatio,
         imageSize: '1K',
+        backgroundReferenceImage: backgroundReferenceDataUrl
+          ? (() => {
+              const match = String(backgroundReferenceDataUrl).match(/^data:(image\\/[^;]+);base64,(.+)$/);
+              return {
+                mimeType: match?.[1] || 'image/jpeg',
+                data: match?.[2] || '',
+              };
+            })()
+          : undefined,
       });
       let imagePathB = null;
       if (!generatedB.imageBase64 || !generationIdB) throw new Error('Gemini returned no comparison image data');
@@ -335,5 +365,13 @@ export async function POST(req: NextRequest) {
     }
     console.error('Generation error:', error);
     return NextResponse.json({ error: error?.message || 'Generation failed' }, { status: 500 });
+  } finally {
+    if (backgroundReferencePathForCleanup) {
+      try {
+        await deleteMedia(backgroundReferencePathForCleanup);
+      } catch (cleanupError) {
+        console.warn('Background reference cleanup failed:', cleanupError);
+      }
+    }
   }
 }
