@@ -1,4 +1,4 @@
-export type PresetType = 'location' | 'camera' | 'style';
+export type PresetType = 'location' | 'camera' | 'lighting' | 'style';
 
 export type BuiltinPresetDefinition = {
   type: PresetType;
@@ -53,6 +53,9 @@ export const BUILTIN_PRESETS: BuiltinPresetDefinition[] = [
   { type: 'camera', key: 'thermal-predator', label: 'FLIR Thermal Imaging', prompt: 'FLIR thermal imaging camera perspective, high-contrast heat signature mapping, monochromatic or false-color infrared spectrum, clinical military targeting aesthetic, dehumanizing voyeuristic distance' },
   { type: 'camera', key: 'vhs-glitch-90s', label: '1995 VHS Camcorder', prompt: 'home video camcorder aesthetic from 1995, severe chromatic aberration, RGB channel shift, tracking lines, blown-out highlights, analog tape degradation, subjective shaky-cam intimacy, raw underground vibe' },
   { type: 'camera', key: 'bodycam-raid', label: 'Tactical Bodycam Raid', prompt: 'chest-mounted tactical bodycam perspective, chaotic wide-angle framing, harsh tactical flashlight illumination piercing absolute darkness, visceral frantic movement, raw unpolished true-crime aesthetic, partial arm/weapon in foreground' },
+
+  // Lighting presets
+  { type: 'lighting', key: 'night-moving-city', label: 'Éjszakai Városi Fények / Mozgó Limuzin', prompt: 'night interior lighting inside a moving luxury limousine, outside is completely dark with only intermittent city light sources visible through the windows, passing streetlights, storefronts, traffic signals, illuminated buildings, headlights and taillights sweep across the cabin in changing bands, brief pools of amber, white, red, and cool urban light move across the black leather seats and passengers, reflections glide across side windows and glossy interior trim, fleeting shadows travel rhythmically across faces and upholstery as the car moves through the city, natural window reflections layered with the dark cabin, practical low-light exposure, soft interior falloff between passing light sources, physically plausible light direction changing according to the moving city environment, no static studio lighting, no artificial neon wash, no permanent colored fill light, cinematic but observational night realism' },
 
   // Style presets
   { type: 'style', key: 'gritty', label: 'Vállalhatatlan / Gritty Underground', prompt: 'Vállalhatatlan visual language: raw late-1990s to early-2000s underground Budapest atmosphere, subdued and slightly dirty color palette, deep but not crushed blacks, restrained saturation, analog film grain, subtle VHS texture, practical imperfect lighting, lived-in surfaces, documentary immediacy, cinematic noir undertone, tactile image texture, visual imperfection that feels physical rather than digital', negative: 'no glossy commercial polish, no candy colors, no pristine digital clarity, no futuristic cyberpunk look, no sterile studio finish' },
