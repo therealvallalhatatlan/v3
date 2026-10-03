@@ -376,9 +376,11 @@ export default function Gallery({ characterId, onUseForAnimation, onEdit }: Prop
                     <Icon name="edit" />
                   </button>
                 )}
-                <button type="button" onClick={() => onUseForAnimation?.(img.url)} disabled={!onUseForAnimation} title="Videó készítése ebből a képből" aria-label="Videó készítése ebből a képből" className="inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-700 px-3 py-2 text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900 disabled:cursor-not-allowed disabled:border-gray-800 disabled:text-gray-600">
-                  <Icon name="play" />
-                </button>
+                {onUseForAnimation && (
+                  <button type="button" onClick={() => onUseForAnimation(img.url)} title="Videó készítése ebből a képből" aria-label="Videó készítése ebből a képből" className="inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-700 px-3 py-2 text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900">
+                    <Icon name="play" />
+                  </button>
+                )}
                 <button type="button" onClick={() => { setSelectedIndex(absoluteIndex); setModal('info'); setShareStatus(''); }} title="Info" aria-label="Info" className="inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-700 px-3 py-2 text-gray-200 transition hover:border-gray-500 hover:bg-zinc-900">
                   <Icon name="info" />
                 </button>
