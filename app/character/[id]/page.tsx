@@ -10,7 +10,7 @@ import type { ImageInfo } from './AnimationPanel';
 import type { Character } from '../../../types';
 import type { AspectRatio16x9, LocationPreset, ShotTemplate } from '../../../types/prompt';
 
-type PresetOption = { value: string; label: string };
+type PresetOption = { value: string; label: string; prompt?: string };
 
 const DEFAULT_CAMERA_OPTIONS: PresetOption[] = [
   { value: 'close-up', label: 'Close-up' },
@@ -38,6 +38,10 @@ const DEFAULT_STYLE_OPTIONS: PresetOption[] = [
   { value: 'dreamy-ethereal', label: 'Dreamy Ethereal' },
   { value: 'graphic-novel', label: 'Graphic Novel' },
   { value: 'police-speed-photo', label: 'Police Speeding Camera Photo' },
+];
+
+const DEFAULT_LIGHTING_OPTIONS: PresetOption[] = [
+  { value: '', label: 'Kézi / nincs preset' },
 ];
 
 const DEFAULT_LOCATION_OPTIONS: PresetOption[] = [
@@ -87,6 +91,7 @@ const GLOBAL_DEFAULT_PRESET_KEY = `illustration.generate.defaultPreset.${GENERAT
   location: string;
   mood: string;
   locationPreset: string;
+  lightingPreset: string;
   locationGeometry: string;
   locationLighting: string;
   locationPalette: string;
@@ -117,6 +122,7 @@ type PresetCatalogResponse = {
   presets?: {
     location?: PresetOption[];
     camera?: PresetOption[];
+    lighting?: PresetOption[];
     style?: PresetOption[];
   };
 };
@@ -129,7 +135,7 @@ function mergeOptions(defaults: PresetOption[], incoming: PresetOption[] | undef
   const map = new Map(defaults.map((item) => [item.value, item]));
   for (const item of incoming || []) {
     if (!item?.value) continue;
-    map.set(item.value, { value: item.value, label: item.label || item.value });
+    map.set(item.value, { value: item.value, label: item.label || item.value, prompt: item.prompt });
   }
   return Array.from(map.values());
 }
@@ -142,12 +148,14 @@ export default function CharacterDetailPage() {
   const [allCharacters, setAllCharacters] = useState<Character[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>('generate');
   const [cameraOptions, setCameraOptions] = useState(DEFAULT_CAMERA_OPTIONS);
+  const [lightingOptions, setLightingOptions] = useState(DEFAULT_LIGHTING_OPTIONS);
   const [styleOptions, setStyleOptions] = useState(DEFAULT_STYLE_OPTIONS);
   const [locationPresetOptions, setLocationPresetOptions] = useState(DEFAULT_LOCATION_OPTIONS);
 
   const [location, setLocation] = useState('');
   const [mood, setMood] = useState('');
   const [locationPreset, setLocationPreset] = useState<LocationPreset>('urban-street');
+  const [lightingPreset, setLightingPreset] = useState('');
   const [locationGeometry, setLocationGeometry] = useState('');
   const [locationLighting, setLocationLighting] = useState('');
   const [locationPalette, setLocationPalette] = useState('');
@@ -208,7 +216,7 @@ export default function CharacterDetailPage() {
   };
 
   const createFormSnapshot = (): GenerateFormState => ({
-    location, mood, locationPreset, locationGeometry, locationLighting, locationPalette, locationProps,
+    location, mood, locationPreset, lightingPreset, locationGeometry, locationLighting, locationPalette, locationProps,
     locationCameraContinuity, shotTemplate, lockGeometry, lockLighting, lockPalette, lockProps, lockCameraRules,
     continuityNotes, actionPrompt, extraCharacterIds, aliasMap, camera, aspectRatio, style, styleIntensity,
     compareMode, compareStyle,
@@ -218,6 +226,7 @@ export default function CharacterDetailPage() {
     if (typeof snapshot.location === 'string') setLocation(snapshot.location);
     if (typeof snapshot.mood === 'string') setMood(snapshot.mood);
     if (typeof snapshot.locationPreset === 'string') setLocationPreset(snapshot.locationPreset);
+    if (typeof snapshot.lightingPreset === 'string') setLightingPreset(snapshot.lightingPreset);
     if (typeof snapshot.locationGeometry === 'string') setLocationGeometry(snapshot.locationGeometry);
     if (typeof snapshot.locationLighting === 'string') setLocationLighting(snapshot.locationLighting);
     if (typeof snapshot.locationPalette === 'string') setLocationPalette(snapshot.locationPalette);
@@ -303,6 +312,7 @@ export default function CharacterDetailPage() {
         const data: PresetCatalogResponse = await response.json();
         if (!response.ok) throw new Error('Failed to load presets');
         setCameraOptions(mergeOptions(DEFAULT_CAMERA_OPTIONS, data.presets?.camera));
+        setLightingOptions(mergeOptions(DEFAULT_LIGHTING_OPTIONS, data.presets?.lighting));
         setStyleOptions(mergeOptions(DEFAULT_STYLE_OPTIONS, data.presets?.style));
         setLocationPresetOptions(mergeOptions(DEFAULT_LOCATION_OPTIONS, data.presets?.location));
       } catch (e) {
@@ -363,7 +373,7 @@ export default function CharacterDetailPage() {
       setStorageInfo('Auto-saved current form.');
     }, 300);
     return () => { if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current); };
-  }, [primaryCharacterId, location, mood, locationPreset, locationGeometry, locationLighting, locationPalette, locationProps, locationCameraContinuity, shotTemplate, lockGeometry, lockLighting, lockPalette, lockProps, lockCameraRules, continuityNotes, actionPrompt, extraCharacterIds, aliasMap, camera, aspectRatio, style, styleIntensity, compareMode, compareStyle]);
+  }, [primaryCharacterId, location, mood, locationPreset, lightingPreset, locationGeometry, locationLighting, locationPalette, locationProps, locationCameraContinuity, shotTemplate, lockGeometry, lockLighting, lockPalette, lockProps, lockCameraRules, continuityNotes, actionPrompt, extraCharacterIds, aliasMap, camera, aspectRatio, style, styleIntensity, compareMode, compareStyle]);
 
   const loadGeneratedImages = async () => {
     if (!primaryCharacterId) return;
@@ -695,6 +705,23 @@ export default function CharacterDetailPage() {
                   <label className="block mb-1 text-sm font-semibold text-gray-300">Helyszín preset</label>
                   <select className="w-full p-3 rounded bg-gray-900 border border-gray-700 text-sm" value={locationPreset} onChange={(e) => setLocationPreset(e.target.value)}>
                     {locationPresetOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-sm font-semibold text-gray-300">Világítás preset</label>
+                  <select
+                    className="w-full p-3 rounded bg-gray-900 border border-gray-700 text-sm"
+                    value={lightingPreset}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setLightingPreset(value);
+                      const selected = lightingOptions.find((opt) => opt.value === value);
+                      if (selected?.prompt !== undefined) setLocationLighting(selected.prompt);
+                      else if (!value) setLocationLighting('');
+                    }}
+                  >
+                    {lightingOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                   </select>
                 </div>
 
