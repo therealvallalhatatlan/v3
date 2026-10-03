@@ -5,7 +5,7 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text,
   plan text not null default 'free' check (plan in ('free','paid','admin')),
-  generation_credits integer not null default 6 check (generation_credits >= 0),
+  generation_credits integer not null default 3 check (generation_credits >= 0),
   character_slots integer not null default 0 check (character_slots >= 0),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -173,9 +173,9 @@ returns trigger language plpgsql security definer set search_path = public
 as $$
 begin
   insert into public.profiles (id, email, plan, generation_credits, character_slots)
-  values (new.id, new.email, 'free', 6, 0) on conflict (id) do nothing;
+  values (new.id, new.email, 'free', 3, 0) on conflict (id) do nothing;
   insert into public.credit_transactions (user_id, type, amount, reference)
-  values (new.id, 'free_grant', 6, 'signup');
+  values (new.id, 'free_grant', 3, 'signup');
   return new;
 end;
 $$;
