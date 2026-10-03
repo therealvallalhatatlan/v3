@@ -19,6 +19,7 @@ type Preset = {
 const TYPES: { value: PresetType; label: string }[] = [
   { value: 'location', label: 'Helyszínpreset' },
   { value: 'camera', label: 'Kamera' },
+  { value: 'lighting', label: 'Világítás' },
   { value: 'style', label: 'Stílus' },
 ];
 
@@ -140,7 +141,7 @@ export default function PresetsPage() {
           <div>
             <div className="text-xs uppercase tracking-[0.25em] text-indigo-400 mb-2">Generálási konfiguráció</div>
             <h1 className="text-3xl md:text-4xl font-bold">Presetkezelő</h1>
-            <p className="text-sm text-gray-400 mt-2 max-w-3xl">Az összes helyszín-, kamera- és stíluspreset egy közös, futásidejű katalógusban él. A beépített presetek szerkeszthetők; a Visszaállítás visszaadja az eredeti értékeket. A Másolás önálló egyedi presetet hoz létre.</p>
+            <p className="text-sm text-gray-400 mt-2 max-w-3xl">Az összes helyszín-, kamera-, világítás- és stíluspreset egy közös, futásidejű katalógusban él. A beépített presetek szerkeszthetők; a Visszaállítás visszaadja az eredeti értékeket. A Másolás önálló egyedi presetet hoz létre.</p>
           </div>
           <a href="/" className="text-sm px-3 py-2 rounded border border-gray-700 hover:border-gray-500">← Karakterek</a>
         </header>
