@@ -33,7 +33,7 @@ function toOption(preset: PresetRecord): PresetOption {
 }
 
 function isType(value: unknown): value is PresetType {
-  return value === 'location' || value === 'camera' || value === 'style';
+  return value === 'location' || value === 'camera' || value === 'lighting' || value === 'style';
 }
 
 function validKey(key: string, type: PresetType): boolean {
@@ -57,6 +57,7 @@ export async function GET() {
     presets: {
       location: all.filter((preset) => preset.type === 'location').map(toOption),
       camera: all.filter((preset) => preset.type === 'camera').map(toOption),
+      lighting: all.filter((preset) => preset.type === 'lighting').map(toOption),
       style: all.filter((preset) => preset.type === 'style').map(toOption),
     },
     all,
@@ -66,7 +67,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    if (!isType(body?.type)) return NextResponse.json({ error: 'type must be location, camera or style' }, { status: 400 });
+    if (!isType(body?.type)) return NextResponse.json({ error: 'type must be location, camera, lighting or style' }, { status: 400 });
 
     const type = body.type as PresetType;
     const key = String(body?.key ?? '').trim().toLowerCase();
