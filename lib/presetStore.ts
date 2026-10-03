@@ -2,7 +2,7 @@ import { readJSON, writeJSON } from './fileUtils';
 import { initStorage } from './paths';
 import { BUILTIN_PRESETS, getBuiltinPreset } from './presetCatalog';
 
-export type PresetType = 'location' | 'camera' | 'style';
+export type PresetType = 'location' | 'camera' | 'lighting' | 'style';
 export type PresetRecord = {
   id: string;
   type: PresetType;
@@ -22,7 +22,7 @@ const PRESETS_FILE = 'presets.json';
 
 function normalizePreset(raw: any): PresetRecord | null {
   if (!raw || typeof raw !== 'object') return null;
-  if (!['location', 'camera', 'style'].includes(raw.type)) return null;
+  if (!['location', 'camera', 'lighting', 'style'].includes(raw.type)) return null;
   const key = String(raw.key ?? '').trim();
   const label = String(raw.label ?? '').trim();
   const prompt = String(raw.prompt ?? '').trim();
