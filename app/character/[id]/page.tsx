@@ -680,7 +680,7 @@ export default function CharacterDetailPage() {
         </div>
 
         <div className="flex gap-1 mb-4 bg-zinc-950 rounded-lg border border-gray-800 p-1">
-          {(['generate', 'animate', 'gallery'] as Tab[]).map((tab) => <button key={tab} type="button" onClick={() => setActiveTab(tab)} className={`flex-1 py-2 rounded text-sm font-semibold ${activeTab === tab ? 'bg-zinc-800 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-zinc-800'}`}>{tab === 'generate' ? '✨ ' : tab === 'animate' ? '▶ ' : '🖼 '}{tab === 'generate' ? 'Generálás' : tab === 'animate' ? 'Videó' : 'Galéria'}</button>)}
+          {(['generate', ...(isPaid ? ['animate'] : []), 'gallery'] as Tab[]).map((tab) => <button key={tab} type="button" onClick={() => setActiveTab(tab)} className={`flex-1 py-2 rounded text-sm font-semibold ${activeTab === tab ? 'bg-zinc-800 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-zinc-800'}`}>{tab === 'generate' ? '✨ ' : tab === 'animate' ? '▶ ' : '🖼 '}{tab === 'generate' ? 'Generálás' : tab === 'animate' ? 'Videó' : 'Galéria'}</button>)}
         </div>
 
         <div className="bg-zinc-950 rounded-lg">
@@ -1052,7 +1052,7 @@ export default function CharacterDetailPage() {
             </>
           )}
 
-          {activeTab === 'animate' && (
+          {isPaid && activeTab === 'animate' && (
             <AnimationPanel
               characterId={primaryCharacterId}
               images={generatedImages}
@@ -1064,7 +1064,7 @@ export default function CharacterDetailPage() {
           {activeTab === 'gallery' && (
             <Gallery
               characterId={primaryCharacterId}
-              onUseForAnimation={handleUseForAnimation}
+              onUseForAnimation={isPaid ? handleUseForAnimation : undefined}
               onEdit={({ id, url }) => {
                 setResult(url);
                 setEditGenerationId(id);
