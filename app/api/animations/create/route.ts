@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAnimationProvider } from '../../../../lib/animationProviders';
-import { getCurrentUser } from '../../../../lib/supabase/server';
+import { createSupabaseServerClient, getCurrentUser } from '../../../../lib/supabase/server';
 import { getAppCharacterById } from '../../../../lib/supabase/characters';
 import { createVideoJob, updateVideoJob } from '../../../../lib/supabase/videoJobs';
 
@@ -24,6 +24,24 @@ export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('plan')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (profileError) {
+    return NextResponse.json({ error: 'Unable to load user profile' }, { status: 500 });
+  }
+
+  if (!profile || (profile.plan !== 'paid' && profile.plan !== 'admin')) {
+    return NextResponse.json(
+      { error: 'A videó generálás a fizetős csomagban érhető el.' },
+      { status: 403 },
+    );
   }
 
   try {
