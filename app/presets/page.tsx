@@ -4,7 +4,7 @@ import LoadingScreen from '../components/LoadingScreen';
 
 import { useEffect, useMemo, useState } from 'react';
 
-type PresetType = 'location' | 'camera' | 'style';
+type PresetType = 'location' | 'camera' | 'lighting' | 'style';
 type Preset = {
   id: string;
   type: PresetType;
